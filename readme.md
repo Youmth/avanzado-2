@@ -1,1 +1,1 @@
-Este es mi repositorio, ya sé usar github
+Este es mi repositorio, ya sé usar github (en teoría)
