@@ -1,5 +1,4 @@
 import numpy as np
-import sys
 
 class App:
     def __init__(self):
