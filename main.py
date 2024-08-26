@@ -24,6 +24,7 @@ class App(ctk.CTk):
         self.viewing_frame.grid(row=0, column=1, sticky='nsew')
         self.viewing_frame.grid_columnconfigure(0, weight=1)
         self.viewing_frame.grid_columnconfigure(1, weight=1)
+        self.viewing_frame.grid_rowconfigure(2, weight=1)
 
         ## Elements and layout of the navigation frame
 
@@ -64,7 +65,7 @@ class App(ctk.CTk):
         ## Elements and layout of the viewing frame
 
         # Main title for the viewing frame
-        self.main_title_view = ctk.CTkLabel(self.viewing_frame, text='DLHM Reconstruction', compound='left', font=ctk.CTkFont(size=15, weight='bold'), anchor=ctk.CENTER)
+        self.main_title_view = ctk.CTkLabel(self.viewing_frame, text='DLHM Viewing Window', compound='left', font=ctk.CTkFont(size=15, weight='bold'), anchor=ctk.CENTER)
         self.main_title_view.grid(row=0, column=0, padx=20, pady=40, columnspan=2, sticky='nsew')
 
         # An image frame containing the captured image and the processed image
@@ -83,15 +84,33 @@ class App(ctk.CTk):
         self.processed_label = ctk.CTkLabel(self.image_frame, image=img, text='')
         self.processed_label.grid(row=0, column=1, padx=20, pady=20, sticky='nsew')
         #####
+        
+        # Buttons for saving and changing image scale
 
         self.saving_frame = ctk.CTkFrame(self.viewing_frame, corner_radius=8)
-        self.saving_frame.grid(row=2, column=0, padx=20, pady=20, sticky='e')
+        self.saving_frame.grid(row=2, column=0, padx=20, pady=20, sticky='ws')
+
+        self.size_label = ctk.CTkLabel(self.saving_frame, text='Picture Size:')
+        self.size_label.grid(row=0, column=0, padx=20)
+        
+        self.size_slider = ctk.CTkSlider(self.saving_frame, width=100, from_=100, to=500, command=self.update_im_size)
+        self.size_slider.grid(row=0, column=1, padx=10, pady=20)
+        self.size_slider.set(400)
 
         self.save_captured_button = ctk.CTkButton(self.saving_frame, text='Save Capture')
-        self.save_captured_button.grid(row=0, column=0, padx=20, pady=20)
+        self.save_captured_button.grid(row=0, column=2, padx=20, pady=20)
 
         self.save_processed_button = ctk.CTkButton(self.saving_frame, text='Save Reconstruction')
-        self.save_processed_button.grid(row=0, column=1, padx=20, pady=20)
+        self.save_processed_button.grid(row=0, column=3, padx=20, pady=20)
+
+    def update_im_size(self, size):
+        img1 = self.captured_label._image
+        img2 = self.processed_label._image
+        img1._size=(size, size)
+        img2._size=(size, size)
+        self.captured_label.configure(image=img1)
+
+        self.processed_label.configure(image=img2)
 
 
 
@@ -103,8 +122,8 @@ class App(ctk.CTk):
         '''Converts numpy array into PhotoImage type'''
         return Image.fromarray(array)
     
-    def create_image(self, img: Image.Image, size= tuple):
-        return ctk.CTkImage(light_image=img, dark_image=img, size=(400, 400))
+    def create_image(self, img: Image.Image, size: tuple = (400, 400)):
+        return ctk.CTkImage(light_image=img, dark_image=img, size=size)
 
     def change_appearance_mode_event(self, new_appearance_mode):
         '''Changes between light and dark mode.'''
