@@ -9,6 +9,7 @@ class App(ctk.CTk):
 
         self.title('DLHM GUI')
         self.geometry('1366x768')
+        self.after(0, lambda:self.state('zoomed'))
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
