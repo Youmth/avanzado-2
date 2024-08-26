@@ -43,6 +43,8 @@ class App(ctk.CTk):
         
         mb_grid_config = {'sticky':'ew', 'padx':1, 'pady':3}
 
+        text_config = {'compound':'left', 'font':ctk.CTkFont(size=15, weight='bold')}
+
         self.param_button = ctk.CTkButton(self.navigation_frame, text='Parameters', **mb_config)
         self.param_button.grid(row=1, column=0, **mb_grid_config)
 
@@ -70,7 +72,7 @@ class App(ctk.CTk):
 
         # An image frame containing the captured image and the processed image
         self.image_frame = ctk.CTkFrame(self.viewing_frame, corner_radius=8)
-        self.image_frame.grid(row=1, column=0, padx=20, pady=20, sticky='e')
+        self.image_frame.grid(row=1, column=0, padx=20, pady=15, sticky='e')
 
         ##### Test
         arr = self.im2arr("sample_images/test_image.jpeg")
@@ -78,11 +80,15 @@ class App(ctk.CTk):
         
         img = self.create_image(im)
 
+        self.captured_title_label = ctk.CTkLabel(self.image_frame, text='Captured Image', **text_config)
+        self.captured_title_label.grid(row=0, column=0, padx=20, pady=20, sticky='nsew')
         self.captured_label = ctk.CTkLabel(self.image_frame, image=img, text='')
-        self.captured_label.grid(row=0, column=0, padx=20, pady=20, sticky='nsew')
-        
+        self.captured_label.grid(row=1, column=0, padx=20, pady=20, sticky='nsew')
+
+        self.captured_title_label = ctk.CTkLabel(self.image_frame, text='Processed Image', **text_config)
+        self.captured_title_label.grid(row=0, column=1, padx=20, pady=20, sticky='nsew')
         self.processed_label = ctk.CTkLabel(self.image_frame, image=img, text='')
-        self.processed_label.grid(row=0, column=1, padx=20, pady=20, sticky='nsew')
+        self.processed_label.grid(row=1, column=1, padx=20, pady=20, sticky='nsew')
         #####
         
         # Buttons for saving and changing image scale
@@ -90,7 +96,7 @@ class App(ctk.CTk):
         self.saving_frame = ctk.CTkFrame(self.viewing_frame, corner_radius=8)
         self.saving_frame.grid(row=2, column=0, padx=20, pady=20, sticky='ws')
 
-        self.size_label = ctk.CTkLabel(self.saving_frame, text='Picture Size:')
+        self.size_label = ctk.CTkLabel(self.saving_frame, text='Viewing Size:')
         self.size_label.grid(row=0, column=0, padx=20)
         
         self.size_slider = ctk.CTkSlider(self.saving_frame, width=100, from_=100, to=500, command=self.update_im_size)
