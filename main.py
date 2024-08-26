@@ -72,7 +72,7 @@ class App(ctk.CTk):
 
         # An image frame containing the captured image and the processed image
         self.image_frame = ctk.CTkFrame(self.viewing_frame, corner_radius=8)
-        self.image_frame.grid(row=1, column=0, padx=20, pady=15, sticky='e')
+        self.image_frame.grid(row=1, column=0, padx=20, pady=15, sticky='ne')
 
         ##### Test
         arr = self.im2arr("sample_images/test_image.jpeg")
