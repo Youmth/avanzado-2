@@ -1,23 +1,117 @@
 import numpy as np
 import customtkinter as ctk
+from PIL import Image, ImageTk
+
 
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
 
         self.title('DLHM GUI')
-        self.geometry('700x450')
+        self.geometry('1366x768')
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
+
         # Create two frames, one for navigation
         self.navigation_frame = ctk.CTkFrame(self, corner_radius=8)
         self.navigation_frame.grid(row=0, column=0, sticky='nsew')
-        self.navigation_frame.grid_rowconfigure(4, weight=1)
+        self.navigation_frame.grid_rowconfigure(5, weight=1)
 
-    #     self.navigation_frame_label = ctk.CTkLabel(self.navigation_frame, text='sample title', compound='left', font=ctk.CTkFont(size=15, weight='bold'))
-    #     self.navigation_frame_label.grid(row=0, column=0, padx=20, pady=20)
+        self.viewing_frame = ctk.CTkFrame(self, corner_radius=8)
+        self.viewing_frame.grid(row=0, column=1, sticky='nsew')
+        self.viewing_frame.grid_columnconfigure(0, weight=1)
+        self.viewing_frame.grid_columnconfigure(1, weight=1)
+
+        ## Elements and layout of the navigation frame
+
+        # Main title for the navigation frame
+        self.main_title_nav = ctk.CTkLabel(self.navigation_frame, text='DLHM Reconstruction', compound='left', font=ctk.CTkFont(size=15, weight='bold'))
+        self.main_title_nav.grid(row=0, column=0, padx=20, pady=40)
+
+        # Missing commands for now
+        mb_config = {'corner_radius':6, 
+                                'height':40,
+                                'border_spacing':10, 
+                                'fg_color':("gray75", "gray25"), 
+                                'text_color':("gray10", "gray90"), 
+                                'hover_color':("gray80", "gray20"),
+                                'anchor':"c"}
+        
+        mb_grid_config = {'sticky':'ew', 'padx':1, 'pady':3}
+
+        self.param_button = ctk.CTkButton(self.navigation_frame, text='Parameters', **mb_config)
+        self.param_button.grid(row=1, column=0, **mb_grid_config)
+
+        self.filters_button = ctk.CTkButton(self.navigation_frame, text='Filters', **mb_config)
+        self.filters_button.grid(row=2, column=0, **mb_grid_config)
+
+        self.it_button = ctk.CTkButton(self.navigation_frame, text='Image Tools', **mb_config)
+        self.it_button.grid(row=3, column=0, **mb_grid_config)
+
+        self.so_button = ctk.CTkButton(self.navigation_frame, text='Saving Options', **mb_config)
+        self.so_button.grid(row=4, column=0, **mb_grid_config)
+
+
+        # Theme selection menu
+        self.appearance_mode_menu = ctk.CTkOptionMenu(self.navigation_frame, values=["Dark", "Light", "System"],
+                                                        command=self.change_appearance_mode_event)
+        self.appearance_mode_menu.grid(row=5, column=0, padx=20, pady=20, sticky="s")
+
+
+        ## Elements and layout of the viewing frame
+
+        # Main title for the viewing frame
+        self.main_title_view = ctk.CTkLabel(self.viewing_frame, text='DLHM Reconstruction', compound='left', font=ctk.CTkFont(size=15, weight='bold'), anchor=ctk.CENTER)
+        self.main_title_view.grid(row=0, column=0, padx=20, pady=40, columnspan=2, sticky='nsew')
+
+        # An image frame containing the captured image and the processed image
+        self.image_frame = ctk.CTkFrame(self.viewing_frame, corner_radius=8)
+        self.image_frame.grid(row=1, column=0, padx=20, pady=20, sticky='e')
+
+        ##### Test
+        arr = self.im2arr("sample_images/test_image.jpeg")
+        im = self.arr2im(arr)
+        
+        img = self.create_image(im)
+
+        self.captured_label = ctk.CTkLabel(self.image_frame, image=img, text='')
+        self.captured_label.grid(row=0, column=0, padx=20, pady=20, sticky='nsew')
+        
+        self.processed_label = ctk.CTkLabel(self.image_frame, image=img, text='')
+        self.processed_label.grid(row=0, column=1, padx=20, pady=20, sticky='nsew')
+        #####
+
+        self.saving_frame = ctk.CTkFrame(self.viewing_frame, corner_radius=8)
+        self.saving_frame.grid(row=2, column=0, padx=20, pady=20, sticky='e')
+
+        self.save_captured_button = ctk.CTkButton(self.saving_frame, text='Save Capture')
+        self.save_captured_button.grid(row=0, column=0, padx=20, pady=20)
+
+        self.save_processed_button = ctk.CTkButton(self.saving_frame, text='Save Reconstruction')
+        self.save_processed_button.grid(row=0, column=1, padx=20, pady=20)
+
+
+
+    def im2arr(self, path: str):
+        '''Converts file image into numpy array.'''
+        return np.asarray(Image.open(path))
+
+    def arr2im(self, array: np.ndarray):
+        '''Converts numpy array into PhotoImage type'''
+        return Image.fromarray(array)
+    
+    def create_image(self, img: Image.Image, size= tuple):
+        return ctk.CTkImage(light_image=img, dark_image=img, size=(400, 400))
+
+    def change_appearance_mode_event(self, new_appearance_mode):
+        '''Changes between light and dark mode.'''
+        ctk.set_appearance_mode(new_appearance_mode)
+
+
+
+
 
     #     self.home_button = ctk.CTkButton(self.navigation_frame, corner_radius=0, height=40, border_spacing=10, text="Home",
     #                                                fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
