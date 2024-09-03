@@ -1,5 +1,6 @@
 import numpy as np
 import customtkinter as ctk
+import cv2
 from PIL import Image, ImageTk
 
 
@@ -18,6 +19,14 @@ class App(ctk.CTk):
         # in order to keep sequential images
         self.current_capture_c=0
         self.current_capture_r=0
+
+        # Inicializar la cámara (0 es generalmente la cámara por defecto)
+        self.cap = cv2.VideoCapture(0)
+
+        # Verificar si la cámara se abrió correctamente
+        if not self.cap.isOpened():
+            print("No se puede abrir la cámara")
+            exit()
 
 
         # Create two frames, one for navigation
@@ -120,6 +129,8 @@ class App(ctk.CTk):
         self.save_processed_button = ctk.CTkButton(self.saving_frame, text='Save Reconstruction', command=self.save_processed)
         self.save_processed_button.grid(row=0, column=3, padx=20, pady=20)
 
+
+
     def update_im_size(self, size):
         img1 = self.captured_label._image
         img2 = self.processed_label._image
@@ -153,6 +164,15 @@ class App(ctk.CTk):
     def change_appearance_mode_event(self, new_appearance_mode):
         '''Changes between light and dark mode.'''
         ctk.set_appearance_mode(new_appearance_mode)
+
+    def streaming(self):
+        ret, img = self.cap.read()
+        cv2image= cv2.cvtColor(self.cap.read()[1], cv2.COLOR_BGR2RGB)
+        im = self.arr2im(cv2image)
+        ImgTks = self.create_image(im)
+        self.captured_label.imgtk = ImgTks
+        self.captured_label.configure(image=ImgTks)
+        self.after(20, self.streaming)
 
 
 
@@ -241,4 +261,5 @@ class App(ctk.CTk):
 
 if __name__=='__main__':
     app = App()
+    app.streaming()
     app.mainloop()
