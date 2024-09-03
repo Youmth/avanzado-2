@@ -14,6 +14,11 @@ class App(ctk.CTk):
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
+        # This variable keeps track of the captured image from the camera or the reconstruction
+        # in order to keep sequential images
+        self.current_capture_c=0
+        self.current_capture_r=0
+
 
         # Create two frames, one for navigation
         self.navigation_frame = ctk.CTkFrame(self, corner_radius=8)
@@ -75,19 +80,25 @@ class App(ctk.CTk):
         self.image_frame.grid(row=1, column=0, padx=20, pady=15, sticky='ne')
 
         ##### Test
-        arr = self.im2arr("sample_images/test_image.jpeg")
-        im = self.arr2im(arr)
+        arr_c = self.im2arr("sample_images/test_image.jpeg")
         
-        img = self.create_image(im)
+        # This is just until I implement image processing
+        arr_r = arr_c
+
+        self.im_c = self.arr2im(arr_c)
+        self.im_r = self.arr2im(arr_r)
+        
+        img_c = self.create_image(self.im_c)
+        img_r = self.create_image(self.im_r)
 
         self.captured_title_label = ctk.CTkLabel(self.image_frame, text='Captured Image', **text_config)
         self.captured_title_label.grid(row=0, column=0, padx=20, pady=20, sticky='nsew')
-        self.captured_label = ctk.CTkLabel(self.image_frame, image=img, text='')
+        self.captured_label = ctk.CTkLabel(self.image_frame, image=img_c, text='')
         self.captured_label.grid(row=1, column=0, padx=20, pady=20, sticky='nsew')
 
         self.captured_title_label = ctk.CTkLabel(self.image_frame, text='Processed Image', **text_config)
         self.captured_title_label.grid(row=0, column=1, padx=20, pady=20, sticky='nsew')
-        self.processed_label = ctk.CTkLabel(self.image_frame, image=img, text='')
+        self.processed_label = ctk.CTkLabel(self.image_frame, image=img_r, text='')
         self.processed_label.grid(row=1, column=1, padx=20, pady=20, sticky='nsew')
         #####
         
@@ -103,10 +114,10 @@ class App(ctk.CTk):
         self.size_slider.grid(row=0, column=1, padx=10, pady=20)
         self.size_slider.set(400)
 
-        self.save_captured_button = ctk.CTkButton(self.saving_frame, text='Save Capture')
+        self.save_captured_button = ctk.CTkButton(self.saving_frame, text='Save Capture', command=self.save_capture)
         self.save_captured_button.grid(row=0, column=2, padx=20, pady=20)
 
-        self.save_processed_button = ctk.CTkButton(self.saving_frame, text='Save Reconstruction')
+        self.save_processed_button = ctk.CTkButton(self.saving_frame, text='Save Reconstruction', command=self.save_processed)
         self.save_processed_button.grid(row=0, column=3, padx=20, pady=20)
 
     def update_im_size(self, size):
@@ -117,6 +128,14 @@ class App(ctk.CTk):
         self.captured_label.configure(image=img1)
 
         self.processed_label.configure(image=img2)
+
+    def save_capture(self, ext:str='bmp'):
+        self.im_c.save(f'saves/capture{self.current_capture_c}.{ext}')
+        self.current_capture_c += 1
+
+    def save_processed(self, ext:str='bmp'):
+        self.im_r.save(f'saves/reconstruction{self.current_capture_c}.{ext}')
+        self.current_capture_c += 1
 
 
 
