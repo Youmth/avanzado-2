@@ -3,6 +3,7 @@ import customtkinter as ctk
 import cv2
 from PIL import Image, ImageTk
 from settings import *
+from _3DHR_Utilities import *
 
 
 class App(ctk.CTk):
@@ -31,10 +32,15 @@ class App(ctk.CTk):
 
         self.width  = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        print(self.width)
+
         self.aspect_ratio = self.width/self.height
 
         self.scale = MAX_IMG_SCALE
+
+        self.z = INIT_Z
+        self.wavelength = DEFAULT_WAVELENGTH #Microns
+        self.dxy = DEFAULT_DXY #Microns
+        self.scale_factor = DEFAULT_SCALE_FACTOR #
 
         self.arr_c = np.zeros((int(self.width), int(self.height)))
         self.arr_r = np.zeros((int(self.width), int(self.height)))
@@ -137,10 +143,6 @@ class App(ctk.CTk):
 
     def update_im_size(self, size):
         self.scale = size
-        self.img_c._size = (self.width*self.scale, self.height*self.scale)
-        self.captured_label.configure(image=self.img_c)
-        self.img_r._size = (self.width*self.scale, self.height*self.scale)
-        self.processed_label.configure(image=self.img_r)
 
     def save_capture(self, ext:str='bmp'):
         self.im_c.save(f'saves/capture/capture{self.current_capture_c}.{ext}')
@@ -154,11 +156,11 @@ class App(ctk.CTk):
 
     def im2arr(self, path: str):
         '''Converts file image into numpy array.'''
-        return np.asarray(Image.open(path))
+        return np.asarray(Image.open(path).convert('L'))
 
     def arr2im(self, array: np.ndarray):
         '''Converts numpy array into PhotoImage type'''
-        return Image.fromarray(array)
+        return Image.fromarray(array, 'L')
     
     def create_image(self, img: Image.Image, size: list = (400, 300)):
         return ctk.CTkImage(light_image=img, dark_image=img, size=tuple(size))
@@ -168,14 +170,32 @@ class App(ctk.CTk):
         ctk.set_appearance_mode(new_appearance_mode)
 
     def streaming(self):
-        self.arr_c= cv2.cvtColor(self.cap.read()[1], cv2.COLOR_BGR2RGB)
+        self.arr_c= cv2.cvtColor(self.cap.read()[1], cv2.COLOR_BGR2GRAY)
         self.arr_c = cv2.flip(self.arr_c, 1)
         self.im_c = self.arr2im(self.arr_c)
         self.img_c = self.create_image(self.im_c)
         self.img_c._size = (self.width*self.scale, self.height*self.scale)
         self.captured_label.img = self.img_c
         self.captured_label.configure(image=self.img_c)
+
+        self.arr_r = self.reconstruct(self.arr_c)
+        self.arr_r = np.uint8(normalize(self.arr_r, 255))
+        self.im_r = self.arr2im(self.arr_r)
+        self.img_r = self.create_image(self.im_r)
+        self.img_r._size = (self.width*self.scale, self.height*self.scale)
+        self.processed_label.img = self.img_r
+        self.processed_label.configure(image=self.img_r)
+
+
         self.after(20, self.streaming)
+
+    def reconstruct(self, img):
+        field = np.sqrt(img)
+        recon = propagate(field, self.z, self.wavelength, self.dxy, self.dxy, self.scale_factor)
+
+        return np.abs(recon)
+
+
 
 
     def run(self):
