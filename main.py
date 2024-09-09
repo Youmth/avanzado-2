@@ -178,8 +178,6 @@ class App(ctk.CTk):
         self.after(20, self.streaming)
 
 
-
-
     def run(self):
         pass
 
