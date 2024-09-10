@@ -37,7 +37,9 @@ class App(ctk.CTk):
 
         self.scale = MAX_IMG_SCALE
 
-        self.z = INIT_Z
+        self.L = INIT_L
+        self.Z = INIT_Z
+        self.r = self.L-self.Z
         self.wavelength = DEFAULT_WAVELENGTH #Microns
         self.dxy = DEFAULT_DXY #Microns
         self.scale_factor = DEFAULT_SCALE_FACTOR #
@@ -51,6 +53,16 @@ class App(ctk.CTk):
         self.img_c._size = (self.width*self.scale, self.height*self.scale)
         self.img_r._size = (self.width*self.scale, self.height*self.scale)
 
+        self.init_viewing_frame()
+        self.init_parameters_frame()
+
+        
+        ## Elements of the parameter menu
+
+        # self.parameters_frame = ctk.CTkFrame(self, )
+
+
+    def init_viewing_frame(self):
         # Create two frames, one for navigation
         self.navigation_frame = ctk.CTkFrame(self, corner_radius=8)
         self.navigation_frame.grid(row=0, column=0, sticky='nsew')
@@ -81,7 +93,7 @@ class App(ctk.CTk):
 
         text_config = {'compound':'left', 'font':ctk.CTkFont(size=15, weight='bold')}
 
-        self.param_button = ctk.CTkButton(self.navigation_frame, text='Parameters', **mb_config)
+        self.param_button = ctk.CTkButton(self.navigation_frame, text='Parameters', **mb_config, command=lambda: self.change_menu_to('parameters'))
         self.param_button.grid(row=1, column=0, **mb_grid_config)
 
         self.filters_button = ctk.CTkButton(self.navigation_frame, text='Filters', **mb_config)
@@ -139,6 +151,96 @@ class App(ctk.CTk):
         self.save_processed_button = ctk.CTkButton(self.saving_frame, text='Save Reconstruction', command=self.save_processed)
         self.save_processed_button.grid(row=0, column=3, padx=20, pady=20)
 
+    def init_parameters_frame(self):
+        self.parameters_frame = ctk.CTkFrame(self, corner_radius=8)
+    
+        self.parameters_frame.rowconfigure(9, weight=1)
+
+        self.main_title_param= ctk.CTkLabel(self.parameters_frame, text='Parameters')
+        self.main_title_param.grid(row=0, column=0, columnspan=2, padx=20, pady=40, sticky='nsew')
+
+        self.L_slider_title = ctk.CTkLabel(self.parameters_frame, text=f'Distancia entre la cámara y la fuente (L): {self.L}')
+        self.L_slider_title.grid(row=1, column=0, padx=20, pady=20, sticky='nsew')
+
+        self.L_slider_entry = ctk.CTkEntry(self.parameters_frame, placeholder_text=f'{round(self.L, 4)}')
+        self.L_slider_entry.grid(row=1, column=1, padx=20, pady=20, sticky='nsew')
+        self.L_slider_entry.setvar(value=f'{round(self.L, 4)}')
+
+        self.L_slider = ctk.CTkSlider(self.parameters_frame, width=200, corner_radius=8, from_=MIN_L, to=MAX_L, command=self.update_L)
+        self.L_slider.grid(row=2, column=0, columnspan=2, padx=20, pady=10, sticky='nsew')
+
+        self.Z_slider_title = ctk.CTkLabel(self.parameters_frame, text=f'Distancia entre la muestra y la fuente (z): {self.Z}')
+        self.Z_slider_title.grid(row=3, column=0, padx=20, pady=20, sticky='nsew')
+
+        self.Z_slider_entry = ctk.CTkEntry(self.parameters_frame, placeholder_text=f'{round(self.Z, 4)}')
+        self.Z_slider_entry.grid(row=3, column=1, padx=20, pady=20, sticky='nsew')
+        self.Z_slider_entry.setvar(value=f'{round(self.Z, 4)}')
+
+        self.Z_slider = ctk.CTkSlider(self.parameters_frame, width=200, corner_radius=8, from_=MIN_Z, to=MAX_Z, command=self.update_z)
+        self.Z_slider.grid(row=4, column=0, columnspan=2, padx=20, pady=10, sticky='nsew')
+
+        self.r_slider_title = ctk.CTkLabel(self.parameters_frame, text=f'Distancia de reconstrucción (r): {self.r}')
+        self.r_slider_title.grid(row=5, column=0, padx=20, pady=20, sticky='nsew')
+
+        self.r_slider_entry = ctk.CTkEntry(self.parameters_frame, placeholder_text=f'{self.r}')
+        self.r_slider_entry.grid(row=3, column=1, padx=20, pady=20, sticky='nsew')
+        self.r_slider_entry.setvar(value=f'{round(self.r, 4)}')
+
+        self.r_slider = ctk.CTkSlider(self.parameters_frame, width=200, corner_radius=8, from_=MIN_L, to=MAX_L, command=self.update_r)
+        self.r_slider.grid(row=6, column=0, columnspan=2, padx=20, pady=10, sticky='nsew')
+
+                # Theme selection menu
+        
+        self.home_button = ctk.CTkButton(self.parameters_frame, text='Home', width=50, command=lambda: self.change_menu_to('home'))
+        self.home_button.grid(row=9, column=0, padx=20, pady=20, sticky='s')
+
+        self.appearance_mode_menu = ctk.CTkOptionMenu(self.parameters_frame, values=["Dark", "Light", "System"],
+                                                        command=self.change_appearance_mode_event)
+        self.appearance_mode_menu.grid(row=9, column=1, padx=20, pady=20, sticky="s")
+
+
+
+    def update_L(self, val):
+        self.L = val
+        self.r = self.L-self.Z
+
+        self.L_slider_title.configure(text=f'Distancia entre la cámara y la fuente (L): {round(self.L, 4)}')
+        self.L_slider.set(self.L)
+        self.L_slider_entry.configure(placeholder_text=f'{round(self.L, 4)}')
+        self.r_slider.set(self.r)
+
+
+    def update_z(self, val):
+        self.Z = val
+        self.r = self.L-self.Z
+
+
+        self.Z_slider_title.configure(text=f'Distancia entre la muestra y la fuente (z): {round(self.Z, 4)}')
+        self.Z_slider.set(self.Z)
+        self.Z_slider_entry.configure(placeholder_text=f'{round(self.Z, 4)}')
+        self.r_slider.set(self.r)
+
+
+    def update_r(self, val):
+        self.r = val
+
+        self.r_slider_title.configure(text=f'Distancia de reconstrucción (r): {round(self.r, 4)}')
+        self.r_slider.set(self.r)
+
+        
+
+    def change_menu_to(self, name:str):
+        if name=='home':
+            self.navigation_frame.grid(row=0, column=0, sticky='nsew')
+            self.navigation_frame.grid_rowconfigure(5, weight=1)
+        else:
+            self.navigation_frame.grid_forget()
+        
+        if name=='parameters':
+            self.parameters_frame.grid(row=0, column=0, sticky='nsew')
+            self.parameters_frame.grid_rowconfigure(5, weight=1)
+        else:
+            self.parameters_frame.grid_forget()
 
 
     def update_im_size(self, size):
@@ -191,7 +293,7 @@ class App(ctk.CTk):
 
     def reconstruct(self, img):
         field = np.sqrt(img)
-        recon = propagate(field, self.z, self.wavelength, self.dxy, self.dxy, self.scale_factor)
+        recon = propagate(field, self.r, self.wavelength, self.dxy, self.dxy, self.scale_factor)
 
         return np.abs(recon)
 
