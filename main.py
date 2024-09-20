@@ -45,7 +45,7 @@ class App(ctk.CTk):
         self.r = self.L-self.Z
         self.wavelength = DEFAULT_WAVELENGTH #Microns
         self.dxy = DEFAULT_DXY #Microns
-        self.scale_factor = self.L/self.Z #
+        self.scale_factor = DEFAULT_SCALE_FACTOR#
 
         self.fix_r = ctk.BooleanVar(self, value=False)
 
