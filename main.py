@@ -73,9 +73,7 @@ class App(ctk.CTk):
 
         self.viewing_frame = ctk.CTkFrame(self, corner_radius=8)
         self.viewing_frame.grid(row=0, column=1, sticky='nsew')
-        self.viewing_frame.grid_columnconfigure(0, weight=1)
-        self.viewing_frame.grid_columnconfigure(1, weight=1)
-        self.viewing_frame.grid_rowconfigure(2, weight=1)
+        self.viewing_frame.grid_rowconfigure(1, weight=1)
 
         ## Elements and layout of the navigation frame
 
@@ -157,7 +155,7 @@ class App(ctk.CTk):
     def init_parameters_frame(self):
         self.parameters_frame = ctk.CTkFrame(self, corner_radius=8)
     
-        self.parameters_frame.rowconfigure(9, weight=1)
+        self.parameters_frame.rowconfigure(0, weight=1)
 
         self.main_title_param= ctk.CTkLabel(self.parameters_frame, text='Parameters')
         self.main_title_param.grid(row=0, column=0, columnspan=2, padx=20, pady=40, sticky='nsew')
@@ -186,7 +184,7 @@ class App(ctk.CTk):
         self.r_slider_title.grid(row=5, column=0, padx=20, pady=20, sticky='nsew')
 
         self.r_slider_entry = ctk.CTkEntry(self.parameters_frame, placeholder_text=f'{self.r}')
-        self.r_slider_entry.grid(row=3, column=1, padx=20, pady=20, sticky='nsew')
+        self.r_slider_entry.grid(row=5, column=1, padx=20, pady=20, sticky='nsew')
         self.r_slider_entry.setvar(value=f'{round(self.r, 4)}')
 
         self.r_slider = ctk.CTkSlider(self.parameters_frame, width=200, corner_radius=8, from_=MIN_L, to=MAX_L, command=self.update_r)
@@ -201,34 +199,47 @@ class App(ctk.CTk):
                                                         command=self.change_appearance_mode_event)
         self.appearance_mode_menu.grid(row=9, column=1, padx=20, pady=20, sticky="s")
 
+    def update_parameters(self):
+        self.Z_slider_title.configure(text=f'Distancia entre la muestra y la fuente (Z): {round(self.Z, 4)}')
+        self.Z_slider.set(self.Z)
+        self.Z_slider_entry.configure(placeholder_text=f'{round(self.Z, 4)}')
+        self.L_slider_title.configure(text=f'Distancia entre la cámara y la fuente (L): {round(self.L, 4)}')
+        self.L_slider.set(self.L)
+        self.L_slider_entry.configure(placeholder_text=f'{round(self.L, 4)}')
+        self.r_slider_title.configure(text=f'Distancia de reconstrucción (r): {round(self.r, 4)}')
+        self.r_slider.set(self.r)
+        self.r_slider_entry.configure(placeholder_text=f'{round(self.r, 4)}')
+
 
 
     def update_L(self, val):
         self.L = val
+
+        if self.L<=self.Z:
+            self.Z = self.L
+
         self.r = self.L-self.Z
 
-        self.L_slider_title.configure(text=f'Distancia entre la cámara y la fuente (L): {round(self.L, 4)}')
-        self.L_slider.set(self.L)
-        self.L_slider_entry.configure(placeholder_text=f'{round(self.L, 4)}')
-        self.r_slider.set(self.r)
+        self.update_parameters()
+
+
+
 
 
     def update_z(self, val):
         self.Z = val
         self.r = self.L-self.Z
 
-
-        self.Z_slider_title.configure(text=f'Distancia entre la muestra y la fuente (z): {round(self.Z, 4)}')
-        self.Z_slider.set(self.Z)
-        self.Z_slider_entry.configure(placeholder_text=f'{round(self.Z, 4)}')
-        self.r_slider.set(self.r)
+        if self.Z >= self.L:
+            self.L = self.Z
+        
+        self.update_parameters()
 
 
     def update_r(self, val):
         self.r = val
 
-        self.r_slider_title.configure(text=f'Distancia de reconstrucción (r): {round(self.r, 4)}')
-        self.r_slider.set(self.r)
+        self.update_parameters()
 
         
 
