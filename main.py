@@ -37,6 +37,9 @@ class App(ctk.CTk):
 
         self.scale = MAX_IMG_SCALE
 
+        print(f'Width: {self.width}')
+        print(f'Height: {self.height}')
+
         self.L = INIT_L
         self.Z = INIT_Z
         self.r = self.L-self.Z
