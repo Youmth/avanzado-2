@@ -45,7 +45,9 @@ class App(ctk.CTk):
         self.r = self.L-self.Z
         self.wavelength = DEFAULT_WAVELENGTH #Microns
         self.dxy = DEFAULT_DXY #Microns
-        self.scale_factor = DEFAULT_SCALE_FACTOR #
+        self.scale_factor = self.L/self.Z #
+
+        self.fix_r = ctk.BooleanVar(self, value=False)
 
         self.arr_c = np.zeros((int(self.width), int(self.height)))
         self.arr_r = np.zeros((int(self.width), int(self.height)))
@@ -155,7 +157,7 @@ class App(ctk.CTk):
     def init_parameters_frame(self):
         self.parameters_frame = ctk.CTkFrame(self, corner_radius=8)
     
-        self.parameters_frame.rowconfigure(0, weight=1)
+        self.parameters_frame.rowconfigure(9, weight=1)
 
         self.main_title_param= ctk.CTkLabel(self.parameters_frame, text='Parameters')
         self.main_title_param.grid(row=0, column=0, columnspan=2, padx=20, pady=40, sticky='nsew')
@@ -187,8 +189,12 @@ class App(ctk.CTk):
         self.r_slider_entry.grid(row=5, column=1, padx=20, pady=20, sticky='nsew')
         self.r_slider_entry.setvar(value=f'{round(self.r, 4)}')
 
+
         self.r_slider = ctk.CTkSlider(self.parameters_frame, width=200, corner_radius=8, from_=MIN_L, to=MAX_L, command=self.update_r)
         self.r_slider.grid(row=6, column=0, columnspan=2, padx=20, pady=10, sticky='nsew')
+
+        self.fix_r_checkbox = ctk.CTkCheckBox(self.parameters_frame, text='Fix reconstruction distance', variable=self.fix_r)
+        self.fix_r_checkbox.grid(row=7, column=0, padx=10, pady=20, sticky='nsew')
 
                 # Theme selection menu
         
@@ -210,28 +216,35 @@ class App(ctk.CTk):
         self.r_slider.set(self.r)
         self.r_slider_entry.configure(placeholder_text=f'{round(self.r, 4)}')
 
+        print(self.fix_r.get())
+
 
 
     def update_L(self, val):
         self.L = val
 
-        if self.L<=self.Z:
-            self.Z = self.L
+        if self.fix_r.get():
+            self.Z = self.L-self.r
+        else:
+            if self.L<=self.Z:
+                self.Z = self.L
 
-        self.r = self.L-self.Z
+            self.r = self.L-self.Z
 
         self.update_parameters()
 
 
-
-
-
     def update_z(self, val):
         self.Z = val
-        self.r = self.L-self.Z
 
-        if self.Z >= self.L:
-            self.L = self.Z
+        if self.fix_r.get():
+            self.L = self.Z+self.r
+        else:
+
+            self.r = self.L-self.Z
+
+            if self.Z >= self.L:
+                self.L = self.Z
         
         self.update_parameters()
 
