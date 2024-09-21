@@ -198,7 +198,7 @@ class App(ctk.CTk):
         self.Z_slider_button.grid(row=4, column=2, padx=5, pady=20, sticky='nsew')
 
         self.r_slider_title = ctk.CTkLabel(self.parameters_frame, text=f'Distancia de reconstrucción (r): {round(self.r, 4)}', width=50)
-        self.r_slider_title.grid(row=5, column=0, columnspan=3, padx=20, pady=(20, 5), sticky='nsew')
+        self.r_slider_title.grid(row=5, column=0, columnspan=3, padx=20, pady=(20, 5))
 
         self.r_slider = ctk.CTkSlider(self.parameters_frame, width=SLIDER_WIDTH, height=SLIDER_HEIGHT, corner_radius=8, from_=MIN_L, to=MAX_L, command=self.update_r)
         self.r_slider.grid(row=6, column=0, padx=20, pady=25, sticky='nsew')
@@ -380,7 +380,7 @@ class App(ctk.CTk):
 
     def reconstruct(self, img):
         field = np.sqrt(img)
-        recon = propagate(field, self.r, self.wavelength, self.dxy, self.dxy, self.scale_factor)
+        recon = propagate(field, -self.r, self.wavelength, self.dxy, self.dxy, self.scale_factor)
 
         return np.abs(recon)
 
