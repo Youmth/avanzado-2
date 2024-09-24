@@ -301,7 +301,7 @@ class App(ctk.CTk):
 
     def set_value_L(self):
         try:
-            val = int(self.L_slider_entry.get())
+            val = float(self.L_slider_entry.get())
         except:
             val = self.L
 
@@ -314,7 +314,7 @@ class App(ctk.CTk):
 
     def set_value_Z(self):
         try:
-            val = int(self.Z_slider_entry.get())
+            val = float(self.Z_slider_entry.get())
         except:
             val = self.Z
 
@@ -327,7 +327,7 @@ class App(ctk.CTk):
 
     def set_value_r(self):
         try:
-            val = int(self.r_slider_entry.get())
+            val = float(self.r_slider_entry.get())
         except:
             val = self.r
 
