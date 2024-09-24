@@ -160,71 +160,95 @@ class App(ctk.CTk):
 
     def init_parameters_frame(self):
         self.parameters_frame = ctk.CTkFrame(self, corner_radius=8, width=PARAMETER_FRAME_WIDTH)
-        self.parameters_frame.rowconfigure(8, weight=1)
         self.parameters_frame.grid_propagate(False)
 
         self.main_title_param= ctk.CTkLabel(self.parameters_frame, text='Parameters')
         self.main_title_param.grid(row=0, column=0, columnspan=3, padx=20, pady=40, sticky='nsew')
 
-        self.L_slider_title = ctk.CTkLabel(self.parameters_frame, text=f'Distancia entre la cámara y la fuente (L): {round(self.L, 4)}')
-        self.L_slider_title.grid(row=1, column=0, columnspan=3, padx=20, pady=(20, 5), sticky='nsew')
+        # Frame para los parámetros de L
+        self.L_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETERS_HEIGHT)
+        self.L_frame.grid(row=1, column=0, sticky='ew', pady=2)
+        self.L_frame.columnconfigure(0, weight=2)
+        self.L_frame.columnconfigure(1, weight=1)
+        self.L_frame.columnconfigure(2, weight=1)
+        self.L_frame.grid_propagate(False)
 
-        self.L_slider = ctk.CTkSlider(self.parameters_frame, width=SLIDER_WIDTH, height=SLIDER_HEIGHT, corner_radius=8, from_=MIN_L, to=MAX_L, command=self.update_L)
-        self.L_slider.grid(row=2, column=0, padx=20, pady=25, sticky='nsew')
+        self.L_slider_title = ctk.CTkLabel(self.L_frame, text=f'Distancia entre la cámara y la fuente (L): {round(self.L, 4)}')
+        self.L_slider_title.grid(row=0, column=0, columnspan=3, sticky='ew', pady=5)
+
+        self.L_slider = ctk.CTkSlider(self.L_frame, width=SLIDER_WIDTH, height=SLIDER_HEIGHT, corner_radius=8, from_=MIN_L, to=MAX_L, command=self.update_L)
+        self.L_slider.grid(row=1, column=0, sticky='ew')
         self.L_slider.set(round(self.L, 4))
 
-        self.L_slider_entry = ctk.CTkEntry(self.parameters_frame, placeholder_text=f'{round(self.L, 4)}', width=50)
-        self.L_slider_entry.grid(row=2, column=1, padx=20, pady=20, sticky='nsew')
-
+        self.L_slider_entry = ctk.CTkEntry(self.L_frame, placeholder_text=f'{round(self.L, 4)}', width=50)
+        self.L_slider_entry.grid(row=1, column=1, sticky='ew', padx=5)
         self.L_slider_entry.setvar(value=f'{round(self.L, 4)}')
-        
-        self.L_slider_button = ctk.CTkButton(self.parameters_frame, text='Set', command=self.set_value_L, width=50)
-        self.L_slider_button.grid(row=2, column=2, padx=5, pady=20, sticky='nsew')
+
+        self.L_slider_button = ctk.CTkButton(self.L_frame, text='Set', command=self.set_value_L, width=50)
+        self.L_slider_button.grid(row=1, column=2, sticky='ew', padx=5)
 
 
+        # Frame para los parámetros de Z
+        self.Z_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETERS_HEIGHT)
+        self.Z_frame.grid(row=2, column=0, sticky='ew', pady=2)
+        self.Z_frame.columnconfigure(0, weight=2)
+        self.Z_frame.columnconfigure(1, weight=1)
+        self.Z_frame.columnconfigure(2, weight=1)
+        self.Z_frame.grid_propagate(False)
 
-        self.Z_slider_title = ctk.CTkLabel(self.parameters_frame, text=f'Distancia entre la muestra y la fuente (z): {round(self.Z, 4)}', width=50)
-        self.Z_slider_title.grid(row=3, column=0, columnspan=3, padx=20, pady=(20, 5), sticky='nsew')
 
-        self.Z_slider = ctk.CTkSlider(self.parameters_frame, width=SLIDER_WIDTH, height=SLIDER_HEIGHT, corner_radius=8, from_=MIN_Z, to=MAX_Z, command=self.update_Z)
-        self.Z_slider.grid(row=4, column=0, padx=20, pady=25, sticky='nsew')
+        self.Z_slider_title = ctk.CTkLabel(self.Z_frame, text=f'Distancia entre la muestra y la fuente (z): {round(self.Z, 4)}', width=50)
+        self.Z_slider_title.grid(row=0, column=0, columnspan=3, sticky='ew', pady=5)
+
+        self.Z_slider = ctk.CTkSlider(self.Z_frame, width=SLIDER_WIDTH, height=SLIDER_HEIGHT, corner_radius=8, from_=MIN_Z, to=MAX_Z, command=self.update_Z)
+        self.Z_slider.grid(row=1, column=0, sticky='ew')
         self.Z_slider.set(round(self.Z, 4))
 
-        self.Z_slider_entry = ctk.CTkEntry(self.parameters_frame, placeholder_text=f'{round(self.Z, 4)}', width=50)
-        self.Z_slider_entry.grid(row=4, column=1, padx=20, pady=20, sticky='nsew')
+        self.Z_slider_entry = ctk.CTkEntry(self.Z_frame, placeholder_text=f'{round(self.Z, 4)}', width=50)
+        self.Z_slider_entry.grid(row=1, column=1, sticky='ew', padx=5)
         self.Z_slider_entry.setvar(value=f'{round(self.Z, 4)}')
 
-        self.Z_slider_button = ctk.CTkButton(self.parameters_frame, text='Set', command=self.set_value_Z, width=50)
-        self.Z_slider_button.grid(row=4, column=2, padx=5, pady=20, sticky='nsew')
+        self.Z_slider_button = ctk.CTkButton(self.Z_frame, text='Set', command=self.set_value_Z, width=50)
+        self.Z_slider_button.grid(row=1, column=2, sticky='ew', padx=5)
 
-        self.r_slider_title = ctk.CTkLabel(self.parameters_frame, text=f'Distancia de reconstrucción (r): {round(self.r, 4)}', width=50)
-        self.r_slider_title.grid(row=5, column=0, columnspan=3, padx=20, pady=(20, 5))
 
-        self.r_slider = ctk.CTkSlider(self.parameters_frame, width=SLIDER_WIDTH, height=SLIDER_HEIGHT, corner_radius=8, from_=MIN_L, to=MAX_L, command=self.update_r)
-        self.r_slider.grid(row=6, column=0, padx=20, pady=25, sticky='nsew')
+        # Frame para los parámetros de r
+        self.r_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETERS_HEIGHT)
+        self.r_frame.grid(row=3, column=0, sticky='ew', pady=2)
+        self.r_frame.columnconfigure(0, weight=2)
+        self.r_frame.columnconfigure(1, weight=1)
+        self.r_frame.columnconfigure(2, weight=1)
+        self.r_frame.grid_propagate(False)
+
+
+        self.r_slider_title = ctk.CTkLabel(self.r_frame, text=f'Distancia de reconstrucción (r): {round(self.r, 4)}', width=50)
+        self.r_slider_title.grid(row=0, column=0, columnspan=3, sticky='ew', pady=5)
+
+        self.r_slider = ctk.CTkSlider(self.r_frame, width=SLIDER_WIDTH, height=SLIDER_HEIGHT, corner_radius=8, from_=MIN_L, to=MAX_L, command=self.update_r)
+        self.r_slider.grid(row=1, column=0, sticky='ew')
         self.r_slider.set(round(self.r, 4))
 
-        self.r_slider_entry = ctk.CTkEntry(self.parameters_frame, placeholder_text=f'{round(self.r, 4)}', width=50)
-        self.r_slider_entry.grid(row=6, column=1, padx=20, pady=20, sticky='nsew')
+        self.r_slider_entry = ctk.CTkEntry(self.r_frame, placeholder_text=f'{round(self.r, 4)}', width=50)
+        self.r_slider_entry.grid(row=1, column=1, sticky='ew', padx=5)
         self.r_slider_entry.setvar(value=f'{round(self.r, 4)}')
 
-        self.r_slider_button = ctk.CTkButton(self.parameters_frame, text='Set', command=self.set_value_r, width=50)
-        self.r_slider_button.grid(row=6, column=2, padx=5, pady=20, sticky='nsew')
+        self.r_slider_button = ctk.CTkButton(self.r_frame, text='Set', command=self.set_value_r, width=50)
+        self.r_slider_button.grid(row=1, column=2, sticky='ew', padx=5)
 
         self.magnification_label = ctk.CTkLabel(self.parameters_frame, text=f'Magnificación: {round(self.scale_factor, 4)}')
-        self.magnification_label.grid(row=7, column=0, padx=10, pady=(20, 5), sticky='nsew')
+        self.magnification_label.grid(row=4, column=0, sticky='ew')
 
         self.fix_r_checkbox = ctk.CTkCheckBox(self.parameters_frame, text='Fix reconstruction distance', variable=self.fix_r, width=50)
-        self.fix_r_checkbox.grid(row=8, column=0, padx=10, pady=20, sticky='nsew')
+        self.fix_r_checkbox.grid(row=5, column=0, sticky='ew')
 
                 # Theme selection menu
+
+        
+        self.parameters_frame.rowconfigure(6, weight=1)
         
         self.home_button = ctk.CTkButton(self.parameters_frame, text='Home', width=50, command=lambda: self.change_menu_to('home'))
-        self.home_button.grid(row=9, column=0, padx=20, pady=20, sticky='s')
+        self.home_button.grid(row=6, column=0, sticky='s')
 
-        self.appearance_mode_menu = ctk.CTkOptionMenu(self.parameters_frame, values=["Dark", "Light", "System"],
-                                                        command=self.change_appearance_mode_event)
-        self.appearance_mode_menu.grid(row=9, column=1, padx=20, pady=20, sticky="s")
 
     def update_parameters(self):
         self.Z_slider_title.configure(text=f'Distancia entre la muestra y la fuente (Z): {round(self.Z, 4)}')
@@ -318,14 +342,12 @@ class App(ctk.CTk):
 
     def change_menu_to(self, name:str):
         if name=='home':
-            self.navigation_frame.grid(row=0, column=0, sticky='nsew')
-            self.navigation_frame.grid_rowconfigure(5, weight=1)
+            self.navigation_frame.grid(row=0, column=0, sticky='nsew', padx=5)
         else:
             self.navigation_frame.grid_forget()
         
         if name=='parameters':
-            self.parameters_frame.grid(row=0, column=0, sticky='nsew')
-            self.parameters_frame.grid_rowconfigure(5, weight=1)
+            self.parameters_frame.grid(row=0, column=0, sticky='nsew', padx=5)
         else:
             self.parameters_frame.grid_forget()
 
