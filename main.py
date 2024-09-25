@@ -53,6 +53,8 @@ class App(ctk.CTk):
         self.scale_factor = self.L/self.Z#
 
         self.fix_r = ctk.BooleanVar(self, value=False)
+        self.square_field = ctk.BooleanVar(self, value=False)
+        self.algorithm_var = ctk.StringVar(self, value='AS')
 
         self.arr_c = np.zeros((int(self.width), int(self.height)))
         self.arr_r = np.zeros((int(self.width), int(self.height)))
@@ -220,7 +222,7 @@ class App(ctk.CTk):
 
 
         # Frame para los parámetros de r
-        self.r_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT+30)
+        self.r_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
         self.r_frame.grid(row=4, column=0, sticky='ew', pady=2)
         self.r_frame.columnconfigure(0, weight=2)
         self.r_frame.grid_propagate(False)
@@ -240,16 +242,52 @@ class App(ctk.CTk):
         self.r_slider_button = ctk.CTkButton(self.r_frame, width=PARAMETER_BUTTON_WIDTH, text='Set', command=self.set_value_r)
         self.r_slider_button.grid(row=1, column=2, sticky='ew', padx=10)
 
-        self.fix_r_checkbox = ctk.CTkCheckBox(self.r_frame, text='Fix reconstruction distance', variable=self.fix_r)
-        self.fix_r_checkbox.grid(row=2, column=0, columnspan=3, sticky='ew', padx=5, pady=5)
+        self.adit_options_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
+        self.adit_options_frame.grid(row=5, column=0, sticky='ew', pady=2)
 
-                # Theme selection menu
+        self.adit_options_frame.rowconfigure(0, weight=1)
+        self.adit_options_frame.rowconfigure(1, weight=0)
+        self.adit_options_frame.rowconfigure(2, weight=1)
+
+        self.adit_options_frame.columnconfigure(0, weight=1)
+        self.adit_options_frame.columnconfigure(1, weight=0)
+        self.adit_options_frame.columnconfigure(2, weight=0)
+        self.adit_options_frame.columnconfigure(3, weight=1)
+
+        self.adit_options_frame.grid_propagate(False)
+
+        self.fix_r_checkbox = ctk.CTkCheckBox(self.adit_options_frame, text='Fix reconstruction distance', variable=self.fix_r)
+        self.fix_r_checkbox.grid(row=1, column=1, sticky='ew', padx=10, pady=5)
+
+        self.square_field_checkbox = ctk.CTkCheckBox(self.adit_options_frame, text='Show Intensity', variable=self.square_field)
+        self.square_field_checkbox.grid(row=1, column=2, sticky='ew', padx=10, pady=5)
+
+
+        self.algorithm_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
+        self.algorithm_frame.grid(row=6, column=0, sticky='ew', pady=2)
+
+        self.algorithm_frame.columnconfigure(0, weight=1)
+        self.algorithm_frame.columnconfigure(1, weight=0)
+        self.algorithm_frame.columnconfigure(2, weight=0)
+        self.algorithm_frame.columnconfigure(3, weight=1)
+
+        self.algorithm_frame.grid_propagate(False)
+
+        self.algorithm_title = ctk.CTkLabel(self.algorithm_frame, text='Algoritmo de reconstrucción:')
+        self.algorithm_title.grid(row=0, column=1, columnspan=2, sticky='ew', pady=5)
+
+        self.as_algorithm_radio = ctk.CTkRadioButton(self.algorithm_frame, text='Angular Spectrum', variable=self.algorithm_var, value='AS')
+        self.as_algorithm_radio.grid(row=1, column=1, sticky='ew', padx=10, pady=5)
+
+        self.kr_algorithm_radio = ctk.CTkRadioButton(self.algorithm_frame, text='Kreuzer Method', variable=self.algorithm_var, value='KR')
+        self.kr_algorithm_radio.grid(row=1, column=2, sticky='ew', padx=10, pady=5)
+
 
         
-        self.parameters_frame.rowconfigure(6, weight=1)
+        self.parameters_frame.rowconfigure(7, weight=1)
         
         self.home_button = ctk.CTkButton(self.parameters_frame, text='Home', command=lambda: self.change_menu_to('home'))
-        self.home_button.grid(row=6, column=0, sticky='s')
+        self.home_button.grid(row=7, column=0, sticky='s')
 
 
     def update_parameters(self):
@@ -416,9 +454,16 @@ class App(ctk.CTk):
 
     def reconstruct(self, img):
         field = np.sqrt(img)
-        recon = propagate(field, -self.r, self.wavelength, self.dxy, self.dxy, self.scale_factor)
 
-        return np.abs(recon)
+        if self.algorithm_var.get() == 'AS':
+            recon = propagate(field, -self.r, self.wavelength, self.dxy, self.dxy, self.scale_factor)
+        elif self.algorithm_var.get() == 'KR':
+            recon = field
+
+        if self.square_field.get():
+            return np.abs(recon)**2
+        else:
+            return np.abs(recon)
 
 
 
