@@ -1,6 +1,7 @@
 import numpy as np
 import customtkinter as ctk
 import cv2
+import time
 from PIL import Image, ImageTk
 from settings import *
 from _3DHR_Utilities import *
@@ -62,6 +63,8 @@ class App(ctk.CTk):
         self.img_c._size = (self.width*self.scale, self.height*self.scale)
         self.img_r._size = (self.width*self.scale, self.height*self.scale)
 
+        self.fps = 0
+
         self.init_viewing_frame()
         self.init_parameters_frame()
 
@@ -73,9 +76,10 @@ class App(ctk.CTk):
 
     def init_viewing_frame(self):
         # Create two frames, one for navigation
-        self.navigation_frame = ctk.CTkFrame(self, corner_radius=8)
-        self.navigation_frame.grid(row=0, column=0, sticky='nsew')
+        self.navigation_frame = ctk.CTkFrame(self, corner_radius=8, width=MENU_FRAME_WIDTH)
+        self.navigation_frame.grid(row=0, column=0, padx=5, sticky='nsew')
         self.navigation_frame.grid_rowconfigure(5, weight=1)
+        self.navigation_frame.grid_propagate(False)
 
         self.viewing_frame = ctk.CTkFrame(self, corner_radius=8)
         self.viewing_frame.grid(row=0, column=1, sticky='nsew')
@@ -89,7 +93,8 @@ class App(ctk.CTk):
 
         # Missing commands for now
         mb_config = {'corner_radius':6, 
-                                'height':40,
+                                'height':MENU_BUTTONS_HEIGHT,
+                                'width':MENU_FRAME_WIDTH,
                                 'border_spacing':10, 
                                 'fg_color':("gray75", "gray25"), 
                                 'text_color':("gray10", "gray90"), 
@@ -158,6 +163,9 @@ class App(ctk.CTk):
         self.save_processed_button = ctk.CTkButton(self.saving_frame, text='Save Reconstruction', command=self.save_processed)
         self.save_processed_button.grid(row=0, column=3, padx=20, pady=20)
 
+        self.fps_label = ctk.CTkLabel(self.saving_frame, text=f'FPS: {self.fps}')
+        self.fps_label.grid(row=0, column=4, padx=20, pady=20)
+
     def init_parameters_frame(self):
         self.parameters_frame = ctk.CTkFrame(self, corner_radius=8, width=PARAMETER_FRAME_WIDTH)
         self.parameters_frame.grid_propagate(False)
@@ -165,88 +173,82 @@ class App(ctk.CTk):
         self.main_title_param= ctk.CTkLabel(self.parameters_frame, text='Parameters')
         self.main_title_param.grid(row=0, column=0, columnspan=3, padx=20, pady=40, sticky='nsew')
 
+        self.magnification_label = ctk.CTkLabel(self.parameters_frame, text=f'Magnificación: {round(self.scale_factor, 4)}')
+        self.magnification_label.grid(row=1, column=0, pady=20, sticky='ew')
+
         # Frame para los parámetros de L
-        self.L_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETERS_HEIGHT)
-        self.L_frame.grid(row=1, column=0, sticky='ew', pady=2)
+        self.L_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
+        self.L_frame.grid(row=2, column=0, sticky='ew', pady=2)
         self.L_frame.columnconfigure(0, weight=2)
-        self.L_frame.columnconfigure(1, weight=1)
-        self.L_frame.columnconfigure(2, weight=1)
         self.L_frame.grid_propagate(False)
 
         self.L_slider_title = ctk.CTkLabel(self.L_frame, text=f'Distancia entre la cámara y la fuente (L): {round(self.L, 4)}')
         self.L_slider_title.grid(row=0, column=0, columnspan=3, sticky='ew', pady=5)
 
-        self.L_slider = ctk.CTkSlider(self.L_frame, width=SLIDER_WIDTH, height=SLIDER_HEIGHT, corner_radius=8, from_=MIN_L, to=MAX_L, command=self.update_L)
+        self.L_slider = ctk.CTkSlider(self.L_frame, height=SLIDER_HEIGHT, corner_radius=8, from_=MIN_L, to=MAX_L, command=self.update_L)
         self.L_slider.grid(row=1, column=0, sticky='ew')
         self.L_slider.set(round(self.L, 4))
 
-        self.L_slider_entry = ctk.CTkEntry(self.L_frame, placeholder_text=f'{round(self.L, 4)}', width=50)
+        self.L_slider_entry = ctk.CTkEntry(self.L_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{round(self.L, 4)}')
         self.L_slider_entry.grid(row=1, column=1, sticky='ew', padx=5)
         self.L_slider_entry.setvar(value=f'{round(self.L, 4)}')
 
-        self.L_slider_button = ctk.CTkButton(self.L_frame, text='Set', command=self.set_value_L, width=50)
-        self.L_slider_button.grid(row=1, column=2, sticky='ew', padx=5)
+        self.L_slider_button = ctk.CTkButton(self.L_frame, width=PARAMETER_BUTTON_WIDTH, text='Set', command=self.set_value_L)
+        self.L_slider_button.grid(row=1, column=2, sticky='ew', padx=10)
 
 
         # Frame para los parámetros de Z
-        self.Z_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETERS_HEIGHT)
-        self.Z_frame.grid(row=2, column=0, sticky='ew', pady=2)
+        self.Z_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
+        self.Z_frame.grid(row=3, column=0, sticky='ew', pady=2)
         self.Z_frame.columnconfigure(0, weight=2)
-        self.Z_frame.columnconfigure(1, weight=1)
-        self.Z_frame.columnconfigure(2, weight=1)
         self.Z_frame.grid_propagate(False)
 
 
-        self.Z_slider_title = ctk.CTkLabel(self.Z_frame, text=f'Distancia entre la muestra y la fuente (z): {round(self.Z, 4)}', width=50)
+        self.Z_slider_title = ctk.CTkLabel(self.Z_frame, text=f'Distancia entre la muestra y la fuente (z): {round(self.Z, 4)}')
         self.Z_slider_title.grid(row=0, column=0, columnspan=3, sticky='ew', pady=5)
 
-        self.Z_slider = ctk.CTkSlider(self.Z_frame, width=SLIDER_WIDTH, height=SLIDER_HEIGHT, corner_radius=8, from_=MIN_Z, to=MAX_Z, command=self.update_Z)
+        self.Z_slider = ctk.CTkSlider(self.Z_frame, height=SLIDER_HEIGHT, corner_radius=8, from_=MIN_Z, to=MAX_Z, command=self.update_Z)
         self.Z_slider.grid(row=1, column=0, sticky='ew')
         self.Z_slider.set(round(self.Z, 4))
 
-        self.Z_slider_entry = ctk.CTkEntry(self.Z_frame, placeholder_text=f'{round(self.Z, 4)}', width=50)
+        self.Z_slider_entry = ctk.CTkEntry(self.Z_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{round(self.Z, 4)}')
         self.Z_slider_entry.grid(row=1, column=1, sticky='ew', padx=5)
         self.Z_slider_entry.setvar(value=f'{round(self.Z, 4)}')
 
-        self.Z_slider_button = ctk.CTkButton(self.Z_frame, text='Set', command=self.set_value_Z, width=50)
-        self.Z_slider_button.grid(row=1, column=2, sticky='ew', padx=5)
+        self.Z_slider_button = ctk.CTkButton(self.Z_frame, width=PARAMETER_BUTTON_WIDTH, text='Set', command=self.set_value_Z)
+        self.Z_slider_button.grid(row=1, column=2, sticky='ew', padx=10)
 
 
         # Frame para los parámetros de r
-        self.r_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETERS_HEIGHT)
-        self.r_frame.grid(row=3, column=0, sticky='ew', pady=2)
+        self.r_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT+30)
+        self.r_frame.grid(row=4, column=0, sticky='ew', pady=2)
         self.r_frame.columnconfigure(0, weight=2)
-        self.r_frame.columnconfigure(1, weight=1)
-        self.r_frame.columnconfigure(2, weight=1)
         self.r_frame.grid_propagate(False)
 
 
-        self.r_slider_title = ctk.CTkLabel(self.r_frame, text=f'Distancia de reconstrucción (r): {round(self.r, 4)}', width=50)
+        self.r_slider_title = ctk.CTkLabel(self.r_frame, text=f'Distancia de reconstrucción (r): {round(self.r, 4)}')
         self.r_slider_title.grid(row=0, column=0, columnspan=3, sticky='ew', pady=5)
 
-        self.r_slider = ctk.CTkSlider(self.r_frame, width=SLIDER_WIDTH, height=SLIDER_HEIGHT, corner_radius=8, from_=MIN_L, to=MAX_L, command=self.update_r)
+        self.r_slider = ctk.CTkSlider(self.r_frame, height=SLIDER_HEIGHT, corner_radius=8, from_=MIN_L, to=MAX_L, command=self.update_r)
         self.r_slider.grid(row=1, column=0, sticky='ew')
         self.r_slider.set(round(self.r, 4))
 
-        self.r_slider_entry = ctk.CTkEntry(self.r_frame, placeholder_text=f'{round(self.r, 4)}', width=50)
+        self.r_slider_entry = ctk.CTkEntry(self.r_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{round(self.r, 4)}')
         self.r_slider_entry.grid(row=1, column=1, sticky='ew', padx=5)
         self.r_slider_entry.setvar(value=f'{round(self.r, 4)}')
 
-        self.r_slider_button = ctk.CTkButton(self.r_frame, text='Set', command=self.set_value_r, width=50)
-        self.r_slider_button.grid(row=1, column=2, sticky='ew', padx=5)
+        self.r_slider_button = ctk.CTkButton(self.r_frame, width=PARAMETER_BUTTON_WIDTH, text='Set', command=self.set_value_r)
+        self.r_slider_button.grid(row=1, column=2, sticky='ew', padx=10)
 
-        self.magnification_label = ctk.CTkLabel(self.parameters_frame, text=f'Magnificación: {round(self.scale_factor, 4)}')
-        self.magnification_label.grid(row=4, column=0, sticky='ew')
-
-        self.fix_r_checkbox = ctk.CTkCheckBox(self.parameters_frame, text='Fix reconstruction distance', variable=self.fix_r, width=50)
-        self.fix_r_checkbox.grid(row=5, column=0, sticky='ew')
+        self.fix_r_checkbox = ctk.CTkCheckBox(self.r_frame, text='Fix reconstruction distance', variable=self.fix_r)
+        self.fix_r_checkbox.grid(row=2, column=0, columnspan=3, sticky='ew', padx=5, pady=5)
 
                 # Theme selection menu
 
         
         self.parameters_frame.rowconfigure(6, weight=1)
         
-        self.home_button = ctk.CTkButton(self.parameters_frame, text='Home', width=50, command=lambda: self.change_menu_to('home'))
+        self.home_button = ctk.CTkButton(self.parameters_frame, text='Home', command=lambda: self.change_menu_to('home'))
         self.home_button.grid(row=6, column=0, sticky='s')
 
 
@@ -262,7 +264,9 @@ class App(ctk.CTk):
         self.r_slider_entry.configure(placeholder_text=f'{round(self.r, 4)}')
         self.magnification_label.configure(text=f'Magnificación: {round(self.scale_factor, 4)}')
 
+
         self.scale_factor = self.L/self.Z
+
 
 
     def update_L(self, val):
@@ -381,6 +385,9 @@ class App(ctk.CTk):
         ctk.set_appearance_mode(new_appearance_mode)
 
     def streaming(self):
+        start_time = time.time()
+
+        # This function will read the image, process it and pass the resulting arrays to the corresponding widgets
         self.arr_c= cv2.cvtColor(self.cap.read()[1], cv2.COLOR_BGR2GRAY)
         self.arr_c = cv2.flip(self.arr_c, 1)
         self.im_c = self.arr2im(self.arr_c)
@@ -396,6 +403,13 @@ class App(ctk.CTk):
         self.img_r._size = (self.width*self.scale, self.height*self.scale)
         self.processed_label.img = self.img_r
         self.processed_label.configure(image=self.img_r)
+
+        end_time = time.time()
+
+        elapsed_time = end_time-start_time
+
+        self.fps = round(1/elapsed_time, 1)
+        self.fps_label.configure(text=f'FPS: {self.fps}')
 
 
         self.after(20, self.streaming)
