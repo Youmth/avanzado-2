@@ -283,6 +283,7 @@ def save(hologram:np.ndarray,
         plt.imsave(prefix  + 'Amplitude-'+ outname + '.' + ext, CompA, cmap=cmap)
 
 ######################################################################################
+'''The rest of this code containts utility functions from my previous project'''
 
 # Function to propagate an optical field using the Angular Spectrum approach
 def propagate(field, z, wavelength, dx, dy, scale_factor=1):

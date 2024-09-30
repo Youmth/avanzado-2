@@ -24,7 +24,7 @@ class App(ctk.CTk):
         self.current_capture_r=0
 
         # Inicializar la cámara (0 es generalmente la cámara por defecto)
-        self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        self.cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
 
         # Verificar si la cámara se abrió correctamente
         if not self.cap.isOpened():
@@ -32,8 +32,8 @@ class App(ctk.CTk):
             exit()
 
         # Asegura que la cámara se inicie en la máxima resolución
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, MAX_HEIGHT)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, MAX_WIDTH)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, MAX_WIDTH)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, MAX_HEIGHT)
 
         self.width  = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
