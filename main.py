@@ -24,7 +24,7 @@ class App(ctk.CTk):
         self.current_capture_r=0
 
         # Inicializar la cámara (0 es generalmente la cámara por defecto)
-        self.cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+        self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
         # Verificar si la cámara se abrió correctamente
         if not self.cap.isOpened():
@@ -456,7 +456,7 @@ class App(ctk.CTk):
         field = np.sqrt(img)
 
         if self.algorithm_var.get() == 'AS':
-            recon = propagate(field, -self.r, self.wavelength, self.dxy, self.dxy, self.scale_factor)
+            recon = propagate(field, self.r, self.wavelength, self.dxy, self.dxy, self.scale_factor)
         elif self.algorithm_var.get() == 'KR':
             recon = field
 
