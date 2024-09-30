@@ -45,6 +45,13 @@ class App(ctk.CTk):
         print(f'Width: {self.width}')
         print(f'Height: {self.height}')
 
+        self.MIN_L = INIT_MIN_L
+        self.MAX_L = INIT_MAX_L
+        self.MIN_Z = INIT_MIN_L
+        self.MAX_Z = INIT_MAX_L
+        self.MIN_R = INIT_MIN_L
+        self.MAX_R = INIT_MAX_L
+
         self.L = INIT_L
         self.Z = INIT_Z
         self.r = self.L-self.Z
@@ -187,7 +194,7 @@ class App(ctk.CTk):
         self.L_slider_title = ctk.CTkLabel(self.L_frame, text=f'Distancia entre la cámara y la fuente (L): {round(self.L, 4)}')
         self.L_slider_title.grid(row=0, column=0, columnspan=3, sticky='ew', pady=5)
 
-        self.L_slider = ctk.CTkSlider(self.L_frame, height=SLIDER_HEIGHT, corner_radius=8, from_=MIN_L, to=MAX_L, command=self.update_L)
+        self.L_slider = ctk.CTkSlider(self.L_frame, height=SLIDER_HEIGHT, corner_radius=8, from_=self.MIN_L, to=self.MAX_L, command=self.update_L)
         self.L_slider.grid(row=1, column=0, sticky='ew')
         self.L_slider.set(round(self.L, 4))
 
@@ -209,7 +216,7 @@ class App(ctk.CTk):
         self.Z_slider_title = ctk.CTkLabel(self.Z_frame, text=f'Distancia entre la muestra y la fuente (z): {round(self.Z, 4)}')
         self.Z_slider_title.grid(row=0, column=0, columnspan=3, sticky='ew', pady=5)
 
-        self.Z_slider = ctk.CTkSlider(self.Z_frame, height=SLIDER_HEIGHT, corner_radius=8, from_=MIN_Z, to=MAX_Z, command=self.update_Z)
+        self.Z_slider = ctk.CTkSlider(self.Z_frame, height=SLIDER_HEIGHT, corner_radius=8, from_=self.MIN_Z, to=self.MAX_Z, command=self.update_Z)
         self.Z_slider.grid(row=1, column=0, sticky='ew')
         self.Z_slider.set(round(self.Z, 4))
 
@@ -231,7 +238,7 @@ class App(ctk.CTk):
         self.r_slider_title = ctk.CTkLabel(self.r_frame, text=f'Distancia de reconstrucción (r): {round(self.r, 4)}')
         self.r_slider_title.grid(row=0, column=0, columnspan=3, sticky='ew', pady=5)
 
-        self.r_slider = ctk.CTkSlider(self.r_frame, height=SLIDER_HEIGHT, corner_radius=8, from_=MIN_L, to=MAX_L, command=self.update_r)
+        self.r_slider = ctk.CTkSlider(self.r_frame, height=SLIDER_HEIGHT, corner_radius=8, from_=self.MIN_R, to=self.MAX_R, command=self.update_r)
         self.r_slider.grid(row=1, column=0, sticky='ew')
         self.r_slider.set(round(self.r, 4))
 
@@ -282,12 +289,58 @@ class App(ctk.CTk):
         self.kr_algorithm_radio = ctk.CTkRadioButton(self.algorithm_frame, text='Kreuzer Method', variable=self.algorithm_var, value='KR')
         self.kr_algorithm_radio.grid(row=1, column=2, sticky='ew', padx=10, pady=5)
 
+        self.limits_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
+        self.limits_frame.grid(row=7, column=0, sticky='ew', pady=2)
+
+        self.limits_frame.columnconfigure(0, weight=1)
+        self.limits_frame.columnconfigure(1, weight=0)
+        self.limits_frame.columnconfigure(2, weight=0)
+        self.limits_frame.columnconfigure(3, weight=0)
+        self.limits_frame.columnconfigure(4, weight=1)
+        self.limits_frame.rowconfigure(0, weight=1)
+        self.limits_frame.rowconfigure(1, weight=0)
+        self.limits_frame.rowconfigure(2, weight=0)
+        self.limits_frame.rowconfigure(3, weight=1)
+
+        self.limit_min_label = ctk.CTkLabel(self.limits_frame, text='Mínimo')
+        self.limit_min_label.grid(row=1, column=0, sticky='ew', padx=5)
+
+        self.limit_max_label = ctk.CTkLabel(self.limits_frame, text='Máximo')
+        self.limit_max_label.grid(row=2, column=0, sticky='ew', padx=5)
+
+        self.limit_L_label = ctk.CTkLabel(self.limits_frame, text='L')
+        self.limit_L_label.grid(row=0, column=1, sticky='ew', padx=5)
+
+        self.limit_Z_label = ctk.CTkLabel(self.limits_frame, text='Z')
+        self.limit_Z_label.grid(row=0, column=2, sticky='ew', padx=5)
+
+        self.limit_R_label = ctk.CTkLabel(self.limits_frame, text='r')
+        self.limit_R_label.grid(row=0, column=3, sticky='ew', padx=5)
+
+        self.limit_min_L_entry = ctk.CTkEntry(self.limits_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{round(self.MIN_L, 4)}')
+        self.limit_min_L_entry.grid(row=1, column=1, sticky='ew', padx=5)
+        self.limit_max_L_entry = ctk.CTkEntry(self.limits_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{round(self.MAX_L, 4)}')
+        self.limit_max_L_entry.grid(row=2, column=1, sticky='ew', padx=5)
+
+        self.limit_min_Z_entry = ctk.CTkEntry(self.limits_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{round(self.MIN_Z, 4)}')
+        self.limit_min_Z_entry.grid(row=1, column=2, sticky='ew', padx=5)
+        self.limit_max_Z_entry = ctk.CTkEntry(self.limits_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{round(self.MAX_Z, 4)}')
+        self.limit_max_Z_entry.grid(row=2, column=2, sticky='ew', padx=5)
+
+        self.limit_min_r_entry = ctk.CTkEntry(self.limits_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{round(self.MIN_Z, 4)}')
+        self.limit_min_r_entry.grid(row=1, column=3, sticky='ew', padx=5)
+        self.limit_max_r_entry = ctk.CTkEntry(self.limits_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{round(self.MAX_Z, 4)}')
+        self.limit_max_r_entry.grid(row=2, column=3, sticky='ew', padx=5)
+
+
+        self.set_limits_button = ctk.CTkButton(self.limits_frame, width=PARAMETER_BUTTON_WIDTH, text='Set all', command=self.set_limits)
+        self.set_limits_button.grid(row=1, column=4, rowspan=3, sticky='ew', padx=10)
 
         
-        self.parameters_frame.rowconfigure(7, weight=1)
+        self.parameters_frame.rowconfigure(8, weight=1)
         
         self.home_button = ctk.CTkButton(self.parameters_frame, text='Home', command=lambda: self.change_menu_to('home'))
-        self.home_button.grid(row=7, column=0, sticky='s')
+        self.home_button.grid(row=8, column=0, pady=20, sticky='s')
 
 
     def update_parameters(self):
@@ -339,6 +392,11 @@ class App(ctk.CTk):
     def update_r(self, val):
         self.r = val
 
+        if self.fix_r.get():
+            self.L = self.Z+self.r
+        else:
+            self.Z = self.L-self.r
+
         self.update_parameters()
 
     def set_value_L(self):
@@ -347,10 +405,10 @@ class App(ctk.CTk):
         except:
             val = self.L
 
-        if val<=MIN_L:
-            val = MIN_L
-        elif val >= MAX_L:
-            val = MAX_L
+        if val<=self.MIN_L:
+            val = self.MIN_L
+        elif val >= self.MAX_L:
+            val = self.MAX_L
 
         self.update_L(val)
 
@@ -360,10 +418,10 @@ class App(ctk.CTk):
         except:
             val = self.Z
 
-        if val<=MIN_Z:
-            val = MIN_Z
-        elif val >= MAX_Z:
-            val = MAX_Z
+        if val<=self.MIN_Z:
+            val = self.MIN_Z
+        elif val >= self.MAX_Z:
+            val = self.MAX_Z
             
         self.update_Z(val)
 
@@ -373,13 +431,16 @@ class App(ctk.CTk):
         except:
             val = self.r
 
-        if val<=MIN_L:
-            val = MIN_L
-        elif val >= MAX_L:
-            val = MAX_L
+        if val<=self.MIN_L:
+            val = self.MIN_L
+        elif val >= self.MAX_L:
+            val = self.MAX_L
         
             
         self.update_r(val)
+
+    def set_limits(self):
+        pass
 
 
     def change_menu_to(self, name:str):
