@@ -92,7 +92,12 @@ class App(ctk.CTk):
 
         self.viewing_frame = ctk.CTkFrame(self, corner_radius=8)
         self.viewing_frame.grid(row=0, column=1, sticky='nsew')
+
         self.viewing_frame.grid_rowconfigure(1, weight=1)
+
+        self.viewing_frame.columnconfigure(0, weight=1)
+        self.viewing_frame.columnconfigure(1, weight=0)
+        self.viewing_frame.columnconfigure(2, weight=1)
 
         ## Elements and layout of the navigation frame
 
@@ -137,11 +142,11 @@ class App(ctk.CTk):
 
         # Main title for the viewing frame
         self.main_title_view = ctk.CTkLabel(self.viewing_frame, text='DLHM Viewing Window', compound='left', font=ctk.CTkFont(size=15, weight='bold'), anchor=ctk.CENTER)
-        self.main_title_view.grid(row=0, column=0, padx=20, pady=40, columnspan=2, sticky='nsew')
+        self.main_title_view.grid(row=0, column=1, padx=20, pady=40, sticky='nsew')
 
         # An image frame containing the captured image and the processed image
         self.image_frame = ctk.CTkFrame(self.viewing_frame, corner_radius=8)
-        self.image_frame.grid(row=1, column=0, padx=20, pady=15, sticky='ne')
+        self.image_frame.grid(row=1, column=1, padx=20, pady=15, sticky='ne')
 
         self.captured_title_label = ctk.CTkLabel(self.image_frame, text='Captured Image', **text_config)
         self.captured_title_label.grid(row=0, column=0, padx=20, pady=20, sticky='nsew')
@@ -157,7 +162,7 @@ class App(ctk.CTk):
         # Buttons for saving and changing image scale
 
         self.saving_frame = ctk.CTkFrame(self.viewing_frame, corner_radius=8)
-        self.saving_frame.grid(row=2, column=0, padx=20, pady=20, sticky='ws')
+        self.saving_frame.grid(row=2, column=0, columnspan=3, padx=20, pady=20, sticky='ws')
 
         self.size_label = ctk.CTkLabel(self.saving_frame, text='Viewing Size:')
         self.size_label.grid(row=0, column=0, padx=20)
