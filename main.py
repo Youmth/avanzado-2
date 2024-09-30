@@ -289,7 +289,7 @@ class App(ctk.CTk):
         self.kr_algorithm_radio = ctk.CTkRadioButton(self.algorithm_frame, text='Kreuzer Method', variable=self.algorithm_var, value='KR')
         self.kr_algorithm_radio.grid(row=1, column=2, sticky='ew', padx=10, pady=5)
 
-        self.limits_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
+        self.limits_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT+LIMITS_FRAME_EXTRA_SPACE)
         self.limits_frame.grid(row=7, column=0, sticky='ew', pady=2)
 
         self.limits_frame.columnconfigure(0, weight=1)
@@ -318,23 +318,26 @@ class App(ctk.CTk):
         self.limit_R_label.grid(row=0, column=3, sticky='ew', padx=5)
 
         self.limit_min_L_entry = ctk.CTkEntry(self.limits_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{round(self.MIN_L, 4)}')
-        self.limit_min_L_entry.grid(row=1, column=1, sticky='ew', padx=5)
+        self.limit_min_L_entry.grid(row=1, column=1, sticky='ew', padx=5, pady=2)
         self.limit_max_L_entry = ctk.CTkEntry(self.limits_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{round(self.MAX_L, 4)}')
-        self.limit_max_L_entry.grid(row=2, column=1, sticky='ew', padx=5)
+        self.limit_max_L_entry.grid(row=2, column=1, sticky='ew', padx=5, pady=2)
 
         self.limit_min_Z_entry = ctk.CTkEntry(self.limits_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{round(self.MIN_Z, 4)}')
-        self.limit_min_Z_entry.grid(row=1, column=2, sticky='ew', padx=5)
+        self.limit_min_Z_entry.grid(row=1, column=2, sticky='ew', padx=5, pady=2)
         self.limit_max_Z_entry = ctk.CTkEntry(self.limits_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{round(self.MAX_Z, 4)}')
-        self.limit_max_Z_entry.grid(row=2, column=2, sticky='ew', padx=5)
+        self.limit_max_Z_entry.grid(row=2, column=2, sticky='ew', padx=5, pady=2)
 
         self.limit_min_r_entry = ctk.CTkEntry(self.limits_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{round(self.MIN_Z, 4)}')
-        self.limit_min_r_entry.grid(row=1, column=3, sticky='ew', padx=5)
+        self.limit_min_r_entry.grid(row=1, column=3, sticky='ew', padx=5, pady=2)
         self.limit_max_r_entry = ctk.CTkEntry(self.limits_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{round(self.MAX_Z, 4)}')
-        self.limit_max_r_entry.grid(row=2, column=3, sticky='ew', padx=5)
+        self.limit_max_r_entry.grid(row=2, column=3, sticky='ew', padx=5, pady=2)
 
 
         self.set_limits_button = ctk.CTkButton(self.limits_frame, width=PARAMETER_BUTTON_WIDTH, text='Set all', command=self.set_limits)
-        self.set_limits_button.grid(row=1, column=4, rowspan=3, sticky='ew', padx=10)
+        self.set_limits_button.grid(row=1, column=4, sticky='ew', padx=10)
+
+        self.restore_limits_button = ctk.CTkButton(self.limits_frame, width=PARAMETER_BUTTON_WIDTH, text='Restore all', command=self.restore_limits)
+        self.restore_limits_button.grid(row=2, column=4, sticky='ew', padx=10)
 
         
         self.parameters_frame.rowconfigure(8, weight=1)
@@ -440,7 +443,46 @@ class App(ctk.CTk):
         self.update_r(val)
 
     def set_limits(self):
-        pass
+        try:
+            self.MIN_L = float(self.limit_min_L_entry.get())
+        except:
+            print(f'self.MIN_L received invalid value.')
+        try:
+            self.MAX_L = float(self.limit_max_L_entry.get())
+        except:
+            print(f'self.MAX_L received invalid value.')
+        try:
+            self.MIN_Z = float(self.limit_min_Z_entry.get())
+        except:
+            print(f'self.MIN_Z received invalid value.')
+        try:
+            self.MAX_Z = float(self.limit_max_Z_entry.get())
+        except:
+            print(f'self.MAX_Z received invalid value.')
+        try:
+            self.MIN_R = float(self.limit_min_r_entry.get())
+        except:
+            print(f'self.MIN_R received invalid value.')
+        try:
+            self.MAX_R = float(self.limit_max_r_entry.get())
+        except:
+            print(f'self.MAX_R received invalid value.')
+        
+        self.L_slider.configure(from_=self.MIN_L, to=self.MAX_L)
+        self.Z_slider.configure(from_=self.MIN_Z, to=self.MAX_Z)
+        self.r_slider.configure(from_=self.MIN_R, to=self.MAX_R)
+
+    def restore_limits(self):
+        self.MIN_L = INIT_MIN_L
+        self.MAX_L = INIT_MAX_L
+        self.MIN_Z = INIT_MIN_L
+        self.MAX_Z = INIT_MAX_L
+        self.MIN_R = INIT_MIN_L
+        self.MAX_R = INIT_MAX_L
+
+        self.L_slider.configure(from_=self.MIN_L, to=self.MAX_L)
+        self.Z_slider.configure(from_=self.MIN_Z, to=self.MAX_Z)
+        self.r_slider.configure(from_=self.MIN_R, to=self.MAX_R)
 
 
     def change_menu_to(self, name:str):
