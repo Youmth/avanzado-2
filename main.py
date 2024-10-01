@@ -23,28 +23,32 @@ class App(ctk.CTk):
         self.current_capture_c=0
         self.current_capture_r=0
 
-        # Inicializar la cámara (0 es generalmente la cámara por defecto)
+        # Initialize camera (0 by default most of the time means the integrated camera)
         self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
-        # Verificar si la cámara se abrió correctamente
+        # Verify that the camera opened correctly
         if not self.cap.isOpened():
             print("No se puede abrir la cámara")
             exit()
 
-        # Asegura que la cámara se inicie en la máxima resolución
+        # Sets the camera resolution to the closest chose in settings
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, MAX_WIDTH)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, MAX_HEIGHT)
 
+        # Gets the actual resolution of the image
         self.width  = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
         self.aspect_ratio = self.width/self.height
 
+        # Scale for visualization, doesn't change the original resolution, just the size
+        # on screen
         self.scale = (MAX_IMG_SCALE - MIN_IMG_SCALE)/2
 
         print(f'Width: {self.width}')
         print(f'Height: {self.height}')
 
+        # Limits for the reconstruction parameters
         self.MIN_L = INIT_MIN_L
         self.MAX_L = INIT_MAX_L
         self.MIN_Z = INIT_MIN_L
@@ -52,6 +56,7 @@ class App(ctk.CTk):
         self.MIN_R = INIT_MIN_L
         self.MAX_R = INIT_MAX_L
 
+        # Physical parameters for reconstructions
         self.L = INIT_L
         self.Z = INIT_Z
         self.r = self.L-self.Z
@@ -59,42 +64,52 @@ class App(ctk.CTk):
         self.dxy = DEFAULT_DXY #Microns
         self.scale_factor = self.L/self.Z#
 
+        # Vars for choosing parameters in the parameters menu
         self.fix_r = ctk.BooleanVar(self, value=False)
         self.square_field = ctk.BooleanVar(self, value=False)
         self.algorithm_var = ctk.StringVar(self, value='AS')
+        
+        self.manual_exposure = ctk.BooleanVar(self, value=False)
+        self.manual_gain = ctk.BooleanVar(self, value=False)
 
+        # Arrays and images for the captured and reconstructed matrices
         self.arr_c = np.zeros((int(self.width), int(self.height)))
         self.arr_r = np.zeros((int(self.width), int(self.height)))
         self.im_c = self.arr2im(self.arr_c)
         self.im_r = self.arr2im(self.arr_r)
         self.img_c = self.create_image(self.im_c)
         self.img_r = self.create_image(self.im_r)
+
+        # This is the visualization size, not the actual size of the processed image
         self.img_c._size = (self.width*self.scale, self.height*self.scale)
         self.img_r._size = (self.width*self.scale, self.height*self.scale)
 
         self.fps = 0
 
+        # Initialize all the elements of the gui at the same time, only once
         self.init_viewing_frame()
         self.init_parameters_frame()
-
-        
-        ## Elements of the parameter menu
-
-        # self.parameters_frame = ctk.CTkFrame(self, )
+        self.init_filters_frame()
 
 
     def init_viewing_frame(self):
-        # Create two frames, one for navigation
+        # Frame for navigation
         self.navigation_frame = ctk.CTkFrame(self, corner_radius=8, width=MENU_FRAME_WIDTH)
         self.navigation_frame.grid(row=0, column=0, padx=5, sticky='nsew')
+
+        # Extra space goes to the last row of the menu, which is the home button and theme list
         self.navigation_frame.grid_rowconfigure(5, weight=1)
+
+        # Prevents dynamic adjusting of size that gets messed up from the change in length of numbers
         self.navigation_frame.grid_propagate(False)
 
         self.viewing_frame = ctk.CTkFrame(self, corner_radius=8)
         self.viewing_frame.grid(row=0, column=1, sticky='nsew')
 
+        # Extra vertical space goes to the title
         self.viewing_frame.grid_rowconfigure(1, weight=1)
 
+        # Empty columns handle extra space so the element in column 1 is centered
         self.viewing_frame.columnconfigure(0, weight=1)
         self.viewing_frame.columnconfigure(1, weight=0)
         self.viewing_frame.columnconfigure(2, weight=1)
@@ -105,7 +120,7 @@ class App(ctk.CTk):
         self.main_title_nav = ctk.CTkLabel(self.navigation_frame, text='DLHM Reconstruction', compound='left', font=ctk.CTkFont(size=15, weight='bold'))
         self.main_title_nav.grid(row=0, column=0, padx=20, pady=40)
 
-        # Missing commands for now
+        # Common configuration for the buttons
         mb_config = {'corner_radius':6, 
                                 'height':MENU_BUTTONS_HEIGHT,
                                 'width':MENU_FRAME_WIDTH,
@@ -115,6 +130,7 @@ class App(ctk.CTk):
                                 'hover_color':("gray80", "gray20"),
                                 'anchor':"c"}
         
+        # Same thing
         mb_grid_config = {'sticky':'ew', 'padx':1, 'pady':3}
 
         text_config = {'compound':'left', 'font':ctk.CTkFont(size=15, weight='bold')}
@@ -122,7 +138,7 @@ class App(ctk.CTk):
         self.param_button = ctk.CTkButton(self.navigation_frame, text='Parameters', **mb_config, command=lambda: self.change_menu_to('parameters'))
         self.param_button.grid(row=1, column=0, **mb_grid_config)
 
-        self.filters_button = ctk.CTkButton(self.navigation_frame, text='Filters', **mb_config)
+        self.filters_button = ctk.CTkButton(self.navigation_frame, text='Filters', **mb_config, command=lambda: self.change_menu_to('filters'))
         self.filters_button.grid(row=2, column=0, **mb_grid_config)
 
         self.it_button = ctk.CTkButton(self.navigation_frame, text='Image Tools', **mb_config)
@@ -136,6 +152,7 @@ class App(ctk.CTk):
         self.appearance_mode_menu = ctk.CTkOptionMenu(self.navigation_frame, values=["Dark", "Light", "System"],
                                                         command=self.change_appearance_mode_event)
         self.appearance_mode_menu.grid(row=5, column=0, padx=20, pady=20, sticky="s")
+
 
 
         ## Elements and layout of the viewing frame
@@ -153,8 +170,8 @@ class App(ctk.CTk):
         self.captured_label = ctk.CTkLabel(self.image_frame, image=self.img_c, text='')
         self.captured_label.grid(row=1, column=0, padx=20, pady=20, sticky='nsew')
 
-        self.captured_title_label = ctk.CTkLabel(self.image_frame, text='Processed Image', **text_config)
-        self.captured_title_label.grid(row=0, column=1, padx=20, pady=20, sticky='nsew')
+        self.processed_title_label = ctk.CTkLabel(self.image_frame, text='Processed Image', **text_config)
+        self.processed_title_label.grid(row=0, column=1, padx=20, pady=20, sticky='nsew')
         self.processed_label = ctk.CTkLabel(self.image_frame, image=self.img_r, text='')
         self.processed_label.grid(row=1, column=1, padx=20, pady=20, sticky='nsew')
         #####
@@ -176,11 +193,20 @@ class App(ctk.CTk):
 
         self.save_processed_button = ctk.CTkButton(self.saving_frame, text='Save Reconstruction', command=self.save_processed)
         self.save_processed_button.grid(row=0, column=3, padx=20, pady=20)
+        
+        self.camera_settings_button = ctk.CTkButton(self.saving_frame, text='Open Camera Settings', command=self.open_camera_settings)
+        self.camera_settings_button.grid(row=0, column=4, padx=20, pady=20)
 
+        # For displaying frames per second (actual real life time, not tick time)
         self.fps_label = ctk.CTkLabel(self.saving_frame, text=f'FPS: {self.fps}')
-        self.fps_label.grid(row=0, column=4, padx=20, pady=20)
+        self.fps_label.grid(row=0, column=5, padx=20, pady=20)
+
+
+
 
     def init_parameters_frame(self):
+        # Menu with the parameter options 
+
         self.parameters_frame = ctk.CTkFrame(self, corner_radius=8, width=PARAMETER_FRAME_WIDTH)
         self.parameters_frame.grid_propagate(False)
 
@@ -190,7 +216,7 @@ class App(ctk.CTk):
         self.magnification_label = ctk.CTkLabel(self.parameters_frame, text=f'Magnificación: {round(self.scale_factor, 4)}')
         self.magnification_label.grid(row=1, column=0, pady=20, sticky='ew')
 
-        # Frame para los parámetros de L
+        # Frame for L parameters
         self.L_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
         self.L_frame.grid(row=2, column=0, sticky='ew', pady=2)
         self.L_frame.columnconfigure(0, weight=2)
@@ -211,7 +237,7 @@ class App(ctk.CTk):
         self.L_slider_button.grid(row=1, column=2, sticky='ew', padx=10)
 
 
-        # Frame para los parámetros de Z
+        # Frame for z parameters
         self.Z_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
         self.Z_frame.grid(row=3, column=0, sticky='ew', pady=2)
         self.Z_frame.columnconfigure(0, weight=2)
@@ -233,7 +259,7 @@ class App(ctk.CTk):
         self.Z_slider_button.grid(row=1, column=2, sticky='ew', padx=10)
 
 
-        # Frame para los parámetros de r
+        # Frame for r parameters
         self.r_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
         self.r_frame.grid(row=4, column=0, sticky='ew', pady=2)
         self.r_frame.columnconfigure(0, weight=2)
@@ -254,6 +280,8 @@ class App(ctk.CTk):
         self.r_slider_button = ctk.CTkButton(self.r_frame, width=PARAMETER_BUTTON_WIDTH, text='Set', command=self.set_value_r)
         self.r_slider_button.grid(row=1, column=2, sticky='ew', padx=10)
 
+
+        # Options for fixing are and displaying intensity instead of amplitude
         self.adit_options_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
         self.adit_options_frame.grid(row=5, column=0, sticky='ew', pady=2)
 
@@ -274,7 +302,7 @@ class App(ctk.CTk):
         self.square_field_checkbox = ctk.CTkCheckBox(self.adit_options_frame, text='Show Intensity', variable=self.square_field)
         self.square_field_checkbox.grid(row=1, column=2, sticky='ew', padx=10, pady=5)
 
-
+        # Frame for selecting the reconstruction method with radio buttons
         self.algorithm_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
         self.algorithm_frame.grid(row=6, column=0, sticky='ew', pady=2)
 
@@ -294,6 +322,7 @@ class App(ctk.CTk):
         self.kr_algorithm_radio = ctk.CTkRadioButton(self.algorithm_frame, text='Kreuzer Method', variable=self.algorithm_var, value='KR')
         self.kr_algorithm_radio.grid(row=1, column=2, sticky='ew', padx=10, pady=5)
 
+        # Frame to redefine the limits of the sliders for L, Z and r
         self.limits_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT+LIMITS_FRAME_EXTRA_SPACE)
         self.limits_frame.grid(row=7, column=0, sticky='ew', pady=2)
 
@@ -337,10 +366,11 @@ class App(ctk.CTk):
         self.limit_max_r_entry = ctk.CTkEntry(self.limits_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{round(self.MAX_Z, 4)}')
         self.limit_max_r_entry.grid(row=2, column=3, sticky='ew', padx=5, pady=2)
 
-
+        # Sets all the limits provided in the entries, all at once
         self.set_limits_button = ctk.CTkButton(self.limits_frame, width=PARAMETER_BUTTON_WIDTH, text='Set all', command=self.set_limits)
         self.set_limits_button.grid(row=1, column=4, sticky='ew', padx=10)
 
+        # Resets them to their initial values
         self.restore_limits_button = ctk.CTkButton(self.limits_frame, width=PARAMETER_BUTTON_WIDTH, text='Restore all', command=self.restore_limits)
         self.restore_limits_button.grid(row=2, column=4, sticky='ew', padx=10)
 
@@ -350,8 +380,36 @@ class App(ctk.CTk):
         self.home_button = ctk.CTkButton(self.parameters_frame, text='Home', command=lambda: self.change_menu_to('home'))
         self.home_button.grid(row=8, column=0, pady=20, sticky='s')
 
+    def init_filters_frame(self):
+        # Frame to activate and configure image enhancement filters
+        self.filters_frame = ctk.CTkFrame(self, corner_radius=8, width=PARAMETER_FRAME_WIDTH)
+        self.filters_frame.grid_propagate(False)
+
+        self.main_title_filters= ctk.CTkLabel(self.filters_frame, text='Filters')
+        self.main_title_filters.grid(row=0, column=0, padx=20, pady=40, sticky='nsew')
+
+        # # Frame para los parámetros de L
+        # self.L_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
+        # self.L_frame.grid(row=2, column=0, sticky='ew', pady=2)
+        # self.L_frame.columnconfigure(0, weight=2)
+        # self.L_frame.grid_propagate(False)
+
+        # self.L_slider_title = ctk.CTkLabel(self.L_frame, text=f'Distancia entre la cámara y la fuente (L): {round(self.L, 4)}')
+        # self.L_slider_title.grid(row=0, column=0, columnspan=3, sticky='ew', pady=5)
+        
+        self.filters_frame.rowconfigure(8, weight=1)
+        
+        self.home_button = ctk.CTkButton(self.filters_frame, text='Home', command=lambda: self.change_menu_to('home'))
+        self.home_button.grid(row=8, column=0, pady=20, sticky='s')
+
+    def open_camera_settings(self):
+        try:
+            self.cap.set(cv2.CAP_PROP_SETTINGS, 0)
+        except:
+            pass
 
     def update_parameters(self):
+        '''Updates all slider values, magnification and scale factor'''
         self.Z_slider_title.configure(text=f'Distancia entre la muestra y la fuente (Z): {round(self.Z, 4)}')
         self.Z_slider.set(round(self.Z, 4))
         self.Z_slider_entry.configure(placeholder_text=f'{round(self.Z, 4)}')
@@ -369,11 +427,14 @@ class App(ctk.CTk):
 
 
     def update_L(self, val):
+        '''Updates the value of L based on the slider'''
         self.L = val
 
+        # Z depends on r and L, if r is fixed, Z and L move together
         if self.fix_r.get():
             self.Z = self.L-self.r
         else:
+            # neither Z nor r can be larger than L
             if self.L<=self.Z:
                 self.Z = self.L
 
@@ -383,23 +444,32 @@ class App(ctk.CTk):
 
 
     def update_Z(self, val):
+        '''Updates the value of Z based on the slider'''
+
         self.Z = val
 
+        # L depends on Z and r, if r is fixed L and Z move together
+        # if not, r is just the difference between L and Z
         if self.fix_r.get():
             self.L = self.Z+self.r
         else:
 
-            self.r = self.L-self.Z
-
+            # L cannot be lower than Z
             if self.Z >= self.L:
                 self.L = self.Z
         
+            self.r = self.L-self.Z
+
+
         self.update_parameters()
 
 
     def update_r(self, val):
+        '''Updates the value of r based on the slider'''
+
         self.r = val
 
+        # If r is fixed, Z will be fixed since it's more probable to be correct
         if self.fix_r.get():
             self.L = self.Z+self.r
         else:
@@ -408,6 +478,7 @@ class App(ctk.CTk):
         self.update_parameters()
 
     def set_value_L(self):
+        '''Allows to enter a specific value from entry, handles empty or mistaken entries'''
         try:
             val = float(self.L_slider_entry.get())
         except:
@@ -421,6 +492,8 @@ class App(ctk.CTk):
         self.update_L(val)
 
     def set_value_Z(self):
+        '''Allows to enter a specific value from entry, handles empty or mistaken entries'''
+
         try:
             val = float(self.Z_slider_entry.get())
         except:
@@ -434,6 +507,8 @@ class App(ctk.CTk):
         self.update_Z(val)
 
     def set_value_r(self):
+        '''Allows to enter a specific value from entry, handles empty or mistaken entries'''
+
         try:
             val = float(self.r_slider_entry.get())
         except:
@@ -448,6 +523,7 @@ class App(ctk.CTk):
         self.update_r(val)
 
     def set_limits(self):
+        '''Handles the limits and the entry of none or mistaken values'''
         try:
             self.MIN_L = float(self.limit_min_L_entry.get())
         except:
@@ -478,6 +554,7 @@ class App(ctk.CTk):
         self.r_slider.configure(from_=self.MIN_R, to=self.MAX_R)
 
     def restore_limits(self):
+        '''Sets the parameters to their initial values'''
         self.MIN_L = INIT_MIN_L
         self.MAX_L = INIT_MAX_L
         self.MIN_Z = INIT_MIN_L
@@ -491,6 +568,7 @@ class App(ctk.CTk):
 
 
     def change_menu_to(self, name:str):
+        '''Allows to change the menu frame that's being shown'''
         if name=='home':
             self.navigation_frame.grid(row=0, column=0, sticky='nsew', padx=5)
         else:
@@ -501,15 +579,23 @@ class App(ctk.CTk):
         else:
             self.parameters_frame.grid_forget()
 
+        if name=='filters':
+            self.filters_frame.grid(row=0, column=0, sticky='nsew', padx=5)
+        else:
+            self.filters_frame.grid_forget()
+
 
     def update_im_size(self, size):
+        '''Updates scale from slider'''
         self.scale = size
 
     def save_capture(self, ext:str='bmp'):
+        '''Saves a capture with an increasing number'''
         self.im_c.save(f'saves/capture/capture{self.current_capture_c}.{ext}')
         self.current_capture_c += 1
 
     def save_processed(self, ext:str='bmp'):
+        '''Saves a capture of reconstruction with an increasing number'''
         self.im_r.save(f'saves/reconstruction/reconstruction{self.current_capture_c}.{ext}')
         self.current_capture_c += 1
 
@@ -524,6 +610,7 @@ class App(ctk.CTk):
         return Image.fromarray(array, 'L')
     
     def create_image(self, img: Image.Image, size: list = (400, 300)):
+        '''Converts image into type usable by customtkinter'''
         return ctk.CTkImage(light_image=img, dark_image=img, size=tuple(size))
 
     def change_appearance_mode_event(self, new_appearance_mode):
@@ -531,34 +618,47 @@ class App(ctk.CTk):
         ctk.set_appearance_mode(new_appearance_mode)
 
     def streaming(self):
-        start_time = time.time()
+        '''Handles capture and processing of the images from the camera'''
+        start_time = time.time() # For fps reading
 
-        # This function will read the image, process it and pass the resulting arrays to the corresponding widgets
+        # Obtains the array from the camera and converts to grayscale
         self.arr_c= cv2.cvtColor(self.cap.read()[1], cv2.COLOR_BGR2GRAY)
+
+        # Flips horizontally (it's normally inverted)
         self.arr_c = cv2.flip(self.arr_c, 1)
+        # Image to be converted into image type
         self.im_c = self.arr2im(self.arr_c)
+        # Image to be shown
         self.img_c = self.create_image(self.im_c)
+        # Scales acording to scale
         self.img_c._size = (self.width*self.scale, self.height*self.scale)
+        # Sets the image to the label
         self.captured_label.img = self.img_c
         self.captured_label.configure(image=self.img_c)
 
+        # Processes and normalizes before doing the same thing
         self.arr_r = self.reconstruct(self.arr_c)
         self.arr_r = np.uint8(normalize(self.arr_r, 255))
+
         self.im_r = self.arr2im(self.arr_r)
         self.img_r = self.create_image(self.im_r)
         self.img_r._size = (self.width*self.scale, self.height*self.scale)
         self.processed_label.img = self.img_r
         self.processed_label.configure(image=self.img_r)
 
-        end_time = time.time()
+        end_time = time.time() # only these lines will count towards the fps since they take the most time
 
         elapsed_time = end_time-start_time
 
         self.fps = round(1/elapsed_time, 1)
         self.fps_label.configure(text=f'FPS: {self.fps}')
 
-
-        self.after(20, self.streaming)
+        # Queues the function to execute 30 milliseconds after reaching this line
+        # Ideally, the delay should be exactly the same time that it takes for 
+        # the function to reach this line since otherwise, time is wasted
+        # however, this is impossible to do without implementing parallelization because
+        # it's very hard to predict the fps since it's exposure (takes time, reduces fps) and resolution dependent
+        self.after(30, self.streaming)
 
     def reconstruct(self, img):
         field = np.sqrt(img)
