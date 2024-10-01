@@ -449,13 +449,10 @@ class App(ctk.CTk):
 
         if self.manual_gain_c_var.get():
             self.adjust_gain(self.gain_slider.get())
-        else:
-            self.gain_c = 0
 
         if self.manual_gain_r_var.get():
             self.adjust_gain(self.gain_slider.get())
-        else:
-            self.gain_r = 0
+
 
         
 
@@ -695,7 +692,11 @@ class App(ctk.CTk):
         # Flips horizontally (it's normally inverted)
         self.arr_c = cv2.flip(self.arr_c, 1)
         # Image to be converted into image type
-        self.im_c = self.arr2im(np.clip(self.arr_c+self.gain_c*255, 0, 255))
+        if self.manual_gain_c_var.get():
+            self.im_c = self.arr2im(np.clip(self.arr_c+self.gain_c*255, 0, 255))
+        else:
+            self.im_c = self.arr2im(self.arr_c)
+
         # Image to be shown
         self.img_c = self.create_image(self.im_c)
         # Scales acording to scale
@@ -707,8 +708,11 @@ class App(ctk.CTk):
         # Processes and normalizes before doing the same thing
         self.arr_r = self.reconstruct(self.arr_c)
         self.arr_r = np.uint8(normalize(self.arr_r, 255))
-
-        self.im_r = self.arr2im(np.clip(self.arr_r+self.gain_r*255, 0, 255))
+        
+        if self.manual_gain_r_var.get():
+            self.im_r = self.arr2im(np.clip(self.arr_r+self.gain_r*255, 0, 255))   
+        else:
+            self.im_r = self.arr2im(self.arr_r)
         self.img_r = self.create_image(self.im_r)
         self.img_r._size = (self.width*self.scale, self.height*self.scale)
         self.processed_label.img = self.img_r
