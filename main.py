@@ -420,12 +420,13 @@ class App(ctk.CTk):
 
         self.gain_frame = ctk.CTkFrame(self.filters_frame, width=FILTER_FRAME_WIDTH, height=FILTER_FRAME_HEIGHT)
         self.gain_frame.grid(row=2, column=0, sticky='ew', pady=2)
+        self.gain_frame.grid_propagate(False)
 
         self.gain_checkbox = ctk.CTkCheckBox(self.gain_frame, text='Gamma filter', variable=self.gain_checkbox_var, command=self.update_manual_filter)
-        self.gain_checkbox.grid(row=0, column=0, sticky='ew', pady=5, padx=10)
+        self.gain_checkbox.grid(row=0, column=0, sticky='ew', pady=10, padx=10)
 
         self.gain_slider = ctk.CTkSlider(self.gain_frame, height=SLIDER_HEIGHT, from_=MIN_GAIN, to=MAX_GAIN, command=self.adjust_gain)
-        self.gain_slider.grid(row=1, column=0, sticky='ew', pady=5, padx=10)
+        self.gain_slider.grid(row=1, column=0, sticky='ew', pady=10, padx=10)
 
         self.filters_frame.rowconfigure(8, weight=1)
         
@@ -435,8 +436,10 @@ class App(ctk.CTk):
     def update_image_filters(self):
         if self.filter_image_var.get()=='CA':
             self.gain_checkbox_var.set(value=self.manual_gain_c_var.get())
+            self.gain_slider.set(self.gain_c)
         elif self.filter_image_var.get()=='PR':
             self.gain_checkbox_var.set(value=self.manual_gain_r_var.get())
+            self.gain_slider.set(self.gain_r)
 
     def update_manual_filter(self):
         if self.filter_image_var.get()=='CA':
@@ -692,7 +695,7 @@ class App(ctk.CTk):
         # Flips horizontally (it's normally inverted)
         self.arr_c = cv2.flip(self.arr_c, 1)
         # Image to be converted into image type
-        self.im_c = self.arr2im(np.clip(self.arr_c+self.gain_c*255, np.min(self.arr_c), np.max(self.arr_c)))
+        self.im_c = self.arr2im(np.clip(self.arr_c+self.gain_c*255, 0, 255))
         # Image to be shown
         self.img_c = self.create_image(self.im_c)
         # Scales acording to scale
@@ -705,7 +708,7 @@ class App(ctk.CTk):
         self.arr_r = self.reconstruct(self.arr_c)
         self.arr_r = np.uint8(normalize(self.arr_r, 255))
 
-        self.im_r = self.arr2im(self.arr_r)
+        self.im_r = self.arr2im(np.clip(self.arr_r+self.gain_r*255, 0, 255))
         self.img_r = self.create_image(self.im_r)
         self.img_r._size = (self.width*self.scale, self.height*self.scale)
         self.processed_label.img = self.img_r
