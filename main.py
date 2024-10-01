@@ -68,9 +68,20 @@ class App(ctk.CTk):
         self.fix_r = ctk.BooleanVar(self, value=False)
         self.square_field = ctk.BooleanVar(self, value=False)
         self.algorithm_var = ctk.StringVar(self, value='AS')
+        self.filter_image_var = ctk.StringVar(self, value='CA') # CA for captured by default
         
-        self.manual_exposure = ctk.BooleanVar(self, value=False)
-        self.manual_gain = ctk.BooleanVar(self, value=False)
+        self.gain_checkbox_var = ctk.BooleanVar(self, value=False)
+        self.contrast_checkbox_var = ctk.BooleanVar(self, value=False)
+
+        self.manual_gain_c_var = ctk.BooleanVar(self, value=False)
+        self.manual_gain_r_var = ctk.BooleanVar(self, value=False)
+        self.manual_contrast_c_var = ctk.BooleanVar(self, value=False)
+        self.manual_contrast_r_var = ctk.BooleanVar(self, value=False)
+
+        self.gain_c = 0
+        self.gain_r = 0
+        self.contrast_c = 0
+        self.contrast_r = 0
 
         # Arrays and images for the captured and reconstructed matrices
         self.arr_c = np.zeros((int(self.width), int(self.height)))
@@ -211,7 +222,7 @@ class App(ctk.CTk):
         self.parameters_frame.grid_propagate(False)
 
         self.main_title_param= ctk.CTkLabel(self.parameters_frame, text='Parameters')
-        self.main_title_param.grid(row=0, column=0, columnspan=3, padx=20, pady=40, sticky='nsew')
+        self.main_title_param.grid(row=0, column=0, padx=20, pady=40, sticky='nsew')
 
         self.magnification_label = ctk.CTkLabel(self.parameters_frame, text=f'Magnificación: {round(self.scale_factor, 4)}')
         self.magnification_label.grid(row=1, column=0, pady=20, sticky='ew')
@@ -382,31 +393,85 @@ class App(ctk.CTk):
 
     def init_filters_frame(self):
         # Frame to activate and configure image enhancement filters
-        self.filters_frame = ctk.CTkFrame(self, corner_radius=8, width=PARAMETER_FRAME_WIDTH)
+        self.filters_frame = ctk.CTkFrame(self, corner_radius=8, width=FILTER_FRAME_WIDTH)
         self.filters_frame.grid_propagate(False)
 
         self.main_title_filters= ctk.CTkLabel(self.filters_frame, text='Filters')
         self.main_title_filters.grid(row=0, column=0, padx=20, pady=40, sticky='nsew')
 
-        # # Frame para los parámetros de L
-        # self.L_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
-        # self.L_frame.grid(row=2, column=0, sticky='ew', pady=2)
-        # self.L_frame.columnconfigure(0, weight=2)
-        # self.L_frame.grid_propagate(False)
+        # Frame for selecting the image with radio buttons  for the filter to be applied
+        self.choose_image_frame = ctk.CTkFrame(self.filters_frame, width=FILTER_FRAME_WIDTH, height=FILTER_FRAME_HEIGHT)
+        self.choose_image_frame.grid(row=1, column=0, sticky='ew', pady=2)
+        self.choose_image_frame.grid_propagate(False)
 
-        # self.L_slider_title = ctk.CTkLabel(self.L_frame, text=f'Distancia entre la cámara y la fuente (L): {round(self.L, 4)}')
-        # self.L_slider_title.grid(row=0, column=0, columnspan=3, sticky='ew', pady=5)
-        
+        self.choose_image_frame.columnconfigure(0, weight=1)
+        self.choose_image_frame.columnconfigure(1, weight=0)
+        self.choose_image_frame.columnconfigure(2, weight=0)
+        self.choose_image_frame.columnconfigure(3, weight=1)
+
+        self.choose_image_title = ctk.CTkLabel(self.choose_image_frame, text=f'Selector de imagen:')
+        self.choose_image_title.grid(row=0, column=1, columnspan=2, sticky='ew', pady=5)
+
+        self.ca_image_radio = ctk.CTkRadioButton(self.choose_image_frame, text='Captured image', variable=self.filter_image_var, value='CA', command=self.update_image_filters)
+        self.ca_image_radio.grid(row=1, column=1, sticky='ew', padx=10, pady=5)
+
+        self.pr_image_radio = ctk.CTkRadioButton(self.choose_image_frame, text='Processed image', variable=self.filter_image_var, value='PR', command=self.update_image_filters)
+        self.pr_image_radio.grid(row=1, column=2, sticky='ew', padx=10, pady=5)
+
+        self.gain_frame = ctk.CTkFrame(self.filters_frame, width=FILTER_FRAME_WIDTH, height=FILTER_FRAME_HEIGHT)
+        self.gain_frame.grid(row=2, column=0, sticky='ew', pady=2)
+
+        self.gain_checkbox = ctk.CTkCheckBox(self.gain_frame, text='Gamma filter', variable=self.gain_checkbox_var, command=self.update_manual_filter)
+        self.gain_checkbox.grid(row=0, column=0, sticky='ew', pady=5, padx=10)
+
+        self.gain_slider = ctk.CTkSlider(self.gain_frame, height=SLIDER_HEIGHT, from_=MIN_GAIN, to=MAX_GAIN, command=self.adjust_gain)
+        self.gain_slider.grid(row=1, column=0, sticky='ew', pady=5, padx=10)
+
         self.filters_frame.rowconfigure(8, weight=1)
         
         self.home_button = ctk.CTkButton(self.filters_frame, text='Home', command=lambda: self.change_menu_to('home'))
         self.home_button.grid(row=8, column=0, pady=20, sticky='s')
 
+    def update_image_filters(self):
+        if self.filter_image_var.get()=='CA':
+            self.gain_checkbox_var.set(value=self.manual_gain_c_var.get())
+        elif self.filter_image_var.get()=='PR':
+            self.gain_checkbox_var.set(value=self.manual_gain_r_var.get())
+
+    def update_manual_filter(self):
+        if self.filter_image_var.get()=='CA':
+            self.manual_gain_c_var.set(value=self.gain_checkbox_var.get())
+        elif self.filter_image_var.get()=='PR':
+            self.manual_gain_r_var.set(value=self.gain_checkbox_var.get())
+
+        if self.manual_gain_c_var.get():
+            self.adjust_gain(self.gain_slider.get())
+        else:
+            self.gain_c = 0
+
+        if self.manual_gain_r_var.get():
+            self.adjust_gain(self.gain_slider.get())
+        else:
+            self.gain_r = 0
+
+        
+
+
+    def adjust_gain(self, val):
+        if (self.filter_image_var.get()=='CA'):
+            if self.manual_gain_c_var.get():
+                self.gain_c = val
+
+        if (self.filter_image_var.get()=='PR'):
+            if self.manual_gain_r_var.get():
+                self.gain_r = val
+
+
     def open_camera_settings(self):
         try:
             self.cap.set(cv2.CAP_PROP_SETTINGS, 0)
         except:
-            pass
+            print('Cannot access camera settings.')
 
     def update_parameters(self):
         '''Updates all slider values, magnification and scale factor'''
@@ -607,7 +672,7 @@ class App(ctk.CTk):
 
     def arr2im(self, array: np.ndarray):
         '''Converts numpy array into PhotoImage type'''
-        return Image.fromarray(array, 'L')
+        return Image.fromarray(array.astype(np.uint8), 'L')
     
     def create_image(self, img: Image.Image, size: list = (400, 300)):
         '''Converts image into type usable by customtkinter'''
@@ -627,7 +692,7 @@ class App(ctk.CTk):
         # Flips horizontally (it's normally inverted)
         self.arr_c = cv2.flip(self.arr_c, 1)
         # Image to be converted into image type
-        self.im_c = self.arr2im(self.arr_c)
+        self.im_c = self.arr2im(np.clip(self.arr_c+self.gain_c*255, np.min(self.arr_c), np.max(self.arr_c)))
         # Image to be shown
         self.img_c = self.create_image(self.im_c)
         # Scales acording to scale
@@ -673,11 +738,6 @@ class App(ctk.CTk):
         else:
             return np.abs(recon)
 
-
-
-
-    def run(self):
-        pass
 
 if __name__=='__main__':
     app = App()
