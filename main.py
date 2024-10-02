@@ -2,6 +2,7 @@ import numpy as np
 import customtkinter as ctk
 import cv2
 import time
+import os
 from PIL import Image, ImageTk
 from settings import *
 from _3DHR_Utilities import *
@@ -17,11 +18,6 @@ class App(ctk.CTk):
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
-
-        # This variable keeps track of the captured image from the camera or the reconstruction
-        # in order to keep sequential images
-        self.current_capture_c=0
-        self.current_capture_r=0
 
         # Initialize camera (0 by default most of the time means the integrated camera)
         self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
@@ -656,13 +652,19 @@ class App(ctk.CTk):
 
     def save_capture(self, ext:str='bmp'):
         '''Saves a capture with an increasing number'''
-        self.im_c.save(f'saves/capture/capture{self.current_capture_c}.{ext}')
-        self.current_capture_c += 1
+        i = 0
+        while os.path.exists("saves/capture/capture%s.bmp" % i):
+            i += 1
+
+        self.im_c.save('saves/capture/capture%s.bmp' % i)
 
     def save_processed(self, ext:str='bmp'):
         '''Saves a capture of reconstruction with an increasing number'''
-        self.im_r.save(f'saves/reconstruction/reconstruction{self.current_capture_c}.{ext}')
-        self.current_capture_c += 1
+        i = 0
+        while os.path.exists("saves/reconstruction/reconstruction%s.bmp" % i):
+            i += 1
+
+        self.im_r.save('saves/reconstruction/reconstruction%s.bmp' % i)
 
 
 
