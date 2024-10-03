@@ -66,16 +66,16 @@ class App(ctk.CTk):
         self.algorithm_var = ctk.StringVar(self, value='AS')
         self.filter_image_var = ctk.StringVar(self, value='CA') # CA for captured by default
         
-        self.gain_checkbox_var = ctk.BooleanVar(self, value=False)
+        self.gamma_checkbox_var = ctk.BooleanVar(self, value=False)
         self.contrast_checkbox_var = ctk.BooleanVar(self, value=False)
 
-        self.manual_gain_c_var = ctk.BooleanVar(self, value=False)
-        self.manual_gain_r_var = ctk.BooleanVar(self, value=False)
+        self.manual_gamma_c_var = ctk.BooleanVar(self, value=False)
+        self.manual_gamma_r_var = ctk.BooleanVar(self, value=False)
         self.manual_contrast_c_var = ctk.BooleanVar(self, value=False)
         self.manual_contrast_r_var = ctk.BooleanVar(self, value=False)
 
-        self.gain_c = 0
-        self.gain_r = 0
+        self.gamma_c = 0
+        self.gamma_r = 0
         self.contrast_c = 0
         self.contrast_r = 0
 
@@ -240,6 +240,9 @@ class App(ctk.CTk):
 
         self.dxy_entry = ctk.CTkEntry(self.variables_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{DEFAULT_DXY}')
         self.dxy_entry.grid(row=1, column=2, sticky='ew', padx=5, pady=2)
+
+        self.set_variables = ctk.CTkButton(self.variables_frame, width=PARAMETER_BUTTON_WIDTH, text='Set', command=self.set_variables)
+        self.set_variables.grid(row=1, column=4, sticky='ew', padx=10)
 
         # Frame for L parameters
         self.L_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
@@ -432,49 +435,64 @@ class App(ctk.CTk):
         self.pr_image_radio = ctk.CTkRadioButton(self.choose_image_frame, text='Processed image', variable=self.filter_image_var, value='PR', command=self.update_image_filters)
         self.pr_image_radio.grid(row=1, column=2, sticky='ew', padx=10, pady=5)
 
-        self.gain_frame = ctk.CTkFrame(self.filters_frame, width=FILTER_FRAME_WIDTH, height=FILTER_FRAME_HEIGHT)
-        self.gain_frame.grid(row=2, column=0, sticky='ew', pady=2)
-        self.gain_frame.grid_propagate(False)
+        self.gamma_frame = ctk.CTkFrame(self.filters_frame, width=FILTER_FRAME_WIDTH, height=FILTER_FRAME_HEIGHT)
+        self.gamma_frame.grid(row=2, column=0, sticky='ew', pady=2)
+        self.gamma_frame.grid_propagate(False)
 
-        self.gain_checkbox = ctk.CTkCheckBox(self.gain_frame, text='Gamma filter', variable=self.gain_checkbox_var, command=self.update_manual_filter)
-        self.gain_checkbox.grid(row=0, column=0, sticky='ew', pady=10, padx=10)
+        self.gamma_checkbox = ctk.CTkCheckBox(self.gamma_frame, text='Gamma filter', variable=self.gamma_checkbox_var, command=self.update_manual_filter)
+        self.gamma_checkbox.grid(row=0, column=0, sticky='ew', pady=10, padx=10)
 
-        self.gain_slider = ctk.CTkSlider(self.gain_frame, height=SLIDER_HEIGHT, from_=MIN_GAIN, to=MAX_GAIN, command=self.adjust_gain)
-        self.gain_slider.grid(row=1, column=0, sticky='ew', pady=10, padx=10)
+        self.gamma_slider = ctk.CTkSlider(self.gamma_frame, height=SLIDER_HEIGHT, from_=MIN_GAIN, to=MAX_GAIN, command=self.adjust_gamma)
+        self.gamma_slider.grid(row=1, column=0, sticky='ew', pady=10, padx=10)
 
         self.filters_frame.rowconfigure(8, weight=1)
         
         self.home_button = ctk.CTkButton(self.filters_frame, text='Home', command=lambda: self.change_menu_to('home'))
         self.home_button.grid(row=8, column=0, pady=20, sticky='s')
 
+    def set_variables(self):
+        try:
+            self.wavelength = float(self.lambda_entry.get())
+        except:
+            self.wavelength = DEFAULT_WAVELENGTH
+            print('Invalid number entered as wavelength')
+        
+        try:
+            self.dxy = float(self.dxy_entry.get())
+        except:
+            self.dxy = DEFAULT_DXY
+            print('Invalid number entered as pixel width')
+
+        print(f'Wavelength: {self.wavelength}, DXY: {self.dxy}')
+
     def update_image_filters(self):
         if self.filter_image_var.get()=='CA':
-            self.gain_checkbox_var.set(value=self.manual_gain_c_var.get())
-            self.gain_slider.set(self.gain_c)
+            self.gamma_checkbox_var.set(value=self.manual_gamma_c_var.get())
+            self.gamma_slider.set(self.gamma_c)
         elif self.filter_image_var.get()=='PR':
-            self.gain_checkbox_var.set(value=self.manual_gain_r_var.get())
-            self.gain_slider.set(self.gain_r)
+            self.gamma_checkbox_var.set(value=self.manual_gamma_r_var.get())
+            self.gamma_slider.set(self.gamma_r)
 
     def update_manual_filter(self):
         if self.filter_image_var.get()=='CA':
-            self.manual_gain_c_var.set(value=self.gain_checkbox_var.get())
+            self.manual_gamma_c_var.set(value=self.gamma_checkbox_var.get())
         elif self.filter_image_var.get()=='PR':
-            self.manual_gain_r_var.set(value=self.gain_checkbox_var.get())
+            self.manual_gamma_r_var.set(value=self.gamma_checkbox_var.get())
 
-        if self.manual_gain_c_var.get():
-            self.adjust_gain(self.gain_slider.get())
+        if self.manual_gamma_c_var.get():
+            self.adjust_gamma(self.gamma_slider.get())
 
-        if self.manual_gain_r_var.get():
-            self.adjust_gain(self.gain_slider.get())
+        if self.manual_gamma_r_var.get():
+            self.adjust_gamma(self.gamma_slider.get())
 
-    def adjust_gain(self, val):
+    def adjust_gamma(self, val):
         if (self.filter_image_var.get()=='CA'):
-            if self.manual_gain_c_var.get():
-                self.gain_c = val
+            if self.manual_gamma_c_var.get():
+                self.gamma_c = val
 
         if (self.filter_image_var.get()=='PR'):
-            if self.manual_gain_r_var.get():
-                self.gain_r = val
+            if self.manual_gamma_r_var.get():
+                self.gamma_r = val
 
     def open_camera_settings(self):
         try:
@@ -699,8 +717,8 @@ class App(ctk.CTk):
         # Flips horizontally (it's normally inverted)
         self.arr_c = cv2.flip(self.arr_c, 1)
         # Image to be converted into image type
-        if self.manual_gain_c_var.get():
-            self.im_c = self.arr2im(np.clip(self.arr_c+self.gain_c*255, 0, 255))
+        if self.manual_gamma_c_var.get():
+            self.im_c = self.arr2im(np.clip(self.arr_c+self.gamma_c*255, 0, 255))
         else:
             self.im_c = self.arr2im(self.arr_c)
 
@@ -716,8 +734,8 @@ class App(ctk.CTk):
         self.arr_r = self.reconstruct(self.arr_c)
         self.arr_r = np.uint8(normalize(self.arr_r, 255))
         
-        if self.manual_gain_r_var.get():
-            self.im_r = self.arr2im(np.clip(self.arr_r+self.gain_r*255, 0, 255))   
+        if self.manual_gamma_r_var.get():
+            self.im_r = self.arr2im(np.clip(self.arr_r+self.gamma_r*255, 0, 255))   
         else:
             self.im_r = self.arr2im(self.arr_r)
         self.img_r = self.create_image(self.im_r)
