@@ -215,14 +215,35 @@ class App(ctk.CTk):
         self.parameters_frame.grid_propagate(False)
 
         self.main_title_param= ctk.CTkLabel(self.parameters_frame, text='Parameters')
-        self.main_title_param.grid(row=0, column=0, padx=20, pady=40, sticky='nsew')
+        self.main_title_param.grid(row=0, column=0, padx=20, pady=20, sticky='nsew')
 
         self.magnification_label = ctk.CTkLabel(self.parameters_frame, text=f'Magnificación: {round(self.scale_factor, 4)}')
         self.magnification_label.grid(row=1, column=0, pady=20, sticky='ew')
 
+        self.variables_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
+        self.variables_frame.grid(row=2, column=0, sticky='ew', pady=2)
+        self.variables_frame.grid_propagate(False)
+
+        self.variables_frame.columnconfigure(0, weight=1)
+        self.variables_frame.columnconfigure(1, weight=0)
+        self.variables_frame.columnconfigure(2, weight=0)
+        self.variables_frame.columnconfigure(3, weight=1)
+
+        self.lambda_label = ctk.CTkLabel(self.variables_frame, text='Wavelength')
+        self.lambda_label.grid(row=0, column=1, sticky='ew', padx=5)
+
+        self.dxy_label = ctk.CTkLabel(self.variables_frame, text='Pixel pitch')
+        self.dxy_label.grid(row=0, column=2, sticky='ew', padx=5)
+
+        self.lambda_entry = ctk.CTkEntry(self.variables_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{DEFAULT_WAVELENGTH}')
+        self.lambda_entry.grid(row=1, column=1, sticky='ew', padx=5, pady=2)
+
+        self.dxy_entry = ctk.CTkEntry(self.variables_frame, width=PARAMETER_ENTRY_WIDTH, placeholder_text=f'{DEFAULT_DXY}')
+        self.dxy_entry.grid(row=1, column=2, sticky='ew', padx=5, pady=2)
+
         # Frame for L parameters
         self.L_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
-        self.L_frame.grid(row=2, column=0, sticky='ew', pady=2)
+        self.L_frame.grid(row=3, column=0, sticky='ew', pady=2)
         self.L_frame.columnconfigure(0, weight=2)
         self.L_frame.grid_propagate(False)
 
@@ -243,7 +264,7 @@ class App(ctk.CTk):
 
         # Frame for z parameters
         self.Z_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
-        self.Z_frame.grid(row=3, column=0, sticky='ew', pady=2)
+        self.Z_frame.grid(row=4, column=0, sticky='ew', pady=2)
         self.Z_frame.columnconfigure(0, weight=2)
         self.Z_frame.grid_propagate(False)
 
@@ -265,7 +286,7 @@ class App(ctk.CTk):
 
         # Frame for r parameters
         self.r_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
-        self.r_frame.grid(row=4, column=0, sticky='ew', pady=2)
+        self.r_frame.grid(row=5, column=0, sticky='ew', pady=2)
         self.r_frame.columnconfigure(0, weight=2)
         self.r_frame.grid_propagate(False)
 
@@ -308,7 +329,7 @@ class App(ctk.CTk):
 
         # Frame for selecting the reconstruction method with radio buttons
         self.algorithm_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
-        self.algorithm_frame.grid(row=6, column=0, sticky='ew', pady=2)
+        self.algorithm_frame.grid(row=7, column=0, sticky='ew', pady=2)
 
         self.algorithm_frame.columnconfigure(0, weight=1)
         self.algorithm_frame.columnconfigure(1, weight=0)
@@ -328,7 +349,7 @@ class App(ctk.CTk):
 
         # Frame to redefine the limits of the sliders for L, Z and r
         self.limits_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT+LIMITS_FRAME_EXTRA_SPACE)
-        self.limits_frame.grid(row=7, column=0, sticky='ew', pady=2)
+        self.limits_frame.grid(row=8, column=0, sticky='ew', pady=2)
 
         self.limits_frame.columnconfigure(0, weight=1)
         self.limits_frame.columnconfigure(1, weight=0)
@@ -379,10 +400,10 @@ class App(ctk.CTk):
         self.restore_limits_button.grid(row=2, column=4, sticky='ew', padx=10)
 
         
-        self.parameters_frame.rowconfigure(8, weight=1)
+        self.parameters_frame.rowconfigure(9, weight=1)
         
         self.home_button = ctk.CTkButton(self.parameters_frame, text='Home', command=lambda: self.change_menu_to('home'))
-        self.home_button.grid(row=8, column=0, pady=20, sticky='s')
+        self.home_button.grid(row=9, column=0, pady=20, sticky='s')
 
     def init_filters_frame(self):
         # Frame to activate and configure image enhancement filters
@@ -660,9 +681,9 @@ class App(ctk.CTk):
         '''Converts numpy array into PhotoImage type'''
         return Image.fromarray(array.astype(np.uint8), 'L')
     
-    def create_image(self, img: Image.Image, size: list = (400, 300)):
+    def create_image(self, img: Image.Image):
         '''Converts image into type usable by customtkinter'''
-        return ctk.CTkImage(light_image=img, dark_image=img, size=tuple(size))
+        return ctk.CTkImage(light_image=img, dark_image=img, size=(self.width, self.height))
 
     def change_appearance_mode_event(self, new_appearance_mode):
         '''Changes between light and dark mode.'''
