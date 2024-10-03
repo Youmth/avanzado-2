@@ -98,7 +98,6 @@ class App(ctk.CTk):
         self.init_parameters_frame()
         self.init_filters_frame()
 
-
     def init_viewing_frame(self):
         # Frame for navigation
         self.navigation_frame = ctk.CTkFrame(self, corner_radius=8, width=MENU_FRAME_WIDTH)
@@ -207,9 +206,6 @@ class App(ctk.CTk):
         # For displaying frames per second (actual real life time, not tick time)
         self.fps_label = ctk.CTkLabel(self.saving_frame, text=f'FPS: {self.fps}')
         self.fps_label.grid(row=0, column=5, padx=20, pady=20)
-
-
-
 
     def init_parameters_frame(self):
         # Menu with the parameter options 
@@ -450,10 +446,6 @@ class App(ctk.CTk):
         if self.manual_gain_r_var.get():
             self.adjust_gain(self.gain_slider.get())
 
-
-        
-
-
     def adjust_gain(self, val):
         if (self.filter_image_var.get()=='CA'):
             if self.manual_gain_c_var.get():
@@ -462,7 +454,6 @@ class App(ctk.CTk):
         if (self.filter_image_var.get()=='PR'):
             if self.manual_gain_r_var.get():
                 self.gain_r = val
-
 
     def open_camera_settings(self):
         try:
@@ -486,8 +477,6 @@ class App(ctk.CTk):
 
         self.scale_factor = self.L/self.Z
 
-
-
     def update_L(self, val):
         '''Updates the value of L based on the slider'''
         self.L = val
@@ -503,7 +492,6 @@ class App(ctk.CTk):
             self.r = self.L-self.Z
 
         self.update_parameters()
-
 
     def update_Z(self, val):
         '''Updates the value of Z based on the slider'''
@@ -524,7 +512,6 @@ class App(ctk.CTk):
 
 
         self.update_parameters()
-
 
     def update_r(self, val):
         '''Updates the value of r based on the slider'''
@@ -628,7 +615,6 @@ class App(ctk.CTk):
         self.Z_slider.configure(from_=self.MIN_Z, to=self.MAX_Z)
         self.r_slider.configure(from_=self.MIN_R, to=self.MAX_R)
 
-
     def change_menu_to(self, name:str):
         '''Allows to change the menu frame that's being shown'''
         if name=='home':
@@ -645,7 +631,6 @@ class App(ctk.CTk):
             self.filters_frame.grid(row=0, column=0, sticky='nsew', padx=5)
         else:
             self.filters_frame.grid_forget()
-
 
     def update_im_size(self, size):
         '''Updates scale from slider'''
