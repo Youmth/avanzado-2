@@ -746,6 +746,8 @@ class App(ctk.CTk):
             return np.abs(recon)**2
         else:
             return np.abs(recon)
+        
+        # comment
 
 
 if __name__=='__main__':
