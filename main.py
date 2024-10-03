@@ -215,6 +215,7 @@ class App(ctk.CTk):
         # Menu with the parameter options 
 
         self.parameters_frame = ctk.CTkFrame(self, corner_radius=8, width=PARAMETER_FRAME_WIDTH)
+        
         self.parameters_frame.grid_propagate(False)
 
         self.main_title_param= ctk.CTkLabel(self.parameters_frame, text='Parameters')
@@ -665,8 +666,6 @@ class App(ctk.CTk):
             i += 1
 
         self.im_r.save('saves/reconstruction/reconstruction%s.bmp' % i)
-
-
 
     def im2arr(self, path: str):
         '''Converts file image into numpy array.'''
