@@ -442,8 +442,18 @@ class App(ctk.CTk):
         self.gamma_checkbox = ctk.CTkCheckBox(self.gamma_frame, text='Gamma filter', variable=self.gamma_checkbox_var, command=self.update_manual_filter)
         self.gamma_checkbox.grid(row=0, column=0, sticky='ew', pady=10, padx=10)
 
-        self.gamma_slider = ctk.CTkSlider(self.gamma_frame, height=SLIDER_HEIGHT, from_=MIN_GAIN, to=MAX_GAIN, command=self.adjust_gamma)
+        self.gamma_slider = ctk.CTkSlider(self.gamma_frame, height=SLIDER_HEIGHT, from_=MIN_GAMMA, to=MAX_GAMMA, command=self.adjust_gamma)
         self.gamma_slider.grid(row=1, column=0, sticky='ew', pady=10, padx=10)
+
+        self.contrast_frame = ctk.CTkFrame(self.filters_frame, width=FILTER_FRAME_WIDTH, height=FILTER_FRAME_HEIGHT)
+        self.contrast_frame.grid(row=3, column=0, sticky='ew', pady=2)
+        self.contrast_frame.grid_propagate(False)
+
+        self.contrast_checkbox = ctk.CTkCheckBox(self.contrast_frame, text='Contrast filter', variable=self.contrast_checkbox_var, command=self.update_manual_filter)
+        self.contrast_checkbox.grid(row=0, column=0, sticky='ew', pady=10, padx=10)
+
+        self.contrast_slider = ctk.CTkSlider(self.contrast_frame, height=SLIDER_HEIGHT, from_=MIN_CONTRAST, to=MAX_CONTRAST, command=self.adjust_contrast)
+        self.contrast_slider.grid(row=1, column=0, sticky='ew', pady=10, padx=10)
 
         self.filters_frame.rowconfigure(8, weight=1)
         
@@ -469,21 +479,27 @@ class App(ctk.CTk):
         if self.filter_image_var.get()=='CA':
             self.gamma_checkbox_var.set(value=self.manual_gamma_c_var.get())
             self.gamma_slider.set(self.gamma_c)
+            self.contrast_checkbox_var.set(value=self.manual_contrast_c_var.get())
+            self.contrast_slider.set(self.contrast_c)
         elif self.filter_image_var.get()=='PR':
             self.gamma_checkbox_var.set(value=self.manual_gamma_r_var.get())
             self.gamma_slider.set(self.gamma_r)
+            self.contrast_checkbox_var.set(value=self.manual_contrast_r_var.get())
+            self.contrast_slider.set(self.contrast_r)
 
     def update_manual_filter(self):
         if self.filter_image_var.get()=='CA':
             self.manual_gamma_c_var.set(value=self.gamma_checkbox_var.get())
+            self.manual_contrast_c_var.set(value=self.contrast_checkbox_var.get())
         elif self.filter_image_var.get()=='PR':
             self.manual_gamma_r_var.set(value=self.gamma_checkbox_var.get())
+            self.manual_contrast_c_var.set(value=self.contrast_checkbox_var.get())
 
-        if self.manual_gamma_c_var.get():
+        if self.manual_gamma_c_var.get() or self.manual_gamma_r_var.get():
             self.adjust_gamma(self.gamma_slider.get())
 
-        if self.manual_gamma_r_var.get():
-            self.adjust_gamma(self.gamma_slider.get())
+        if self.manual_contrast_c_var.get() or self.manual_contrast_r_var.get():
+            self.adjust_contrast(self.contrast_slider.get())
 
     def adjust_gamma(self, val):
         if (self.filter_image_var.get()=='CA'):
@@ -493,6 +509,15 @@ class App(ctk.CTk):
         if (self.filter_image_var.get()=='PR'):
             if self.manual_gamma_r_var.get():
                 self.gamma_r = val
+
+    def adjust_contrast(self, val):
+        if (self.filter_image_var.get()=='CA'):
+            if self.manual_contrast_c_var.get():
+                self.contrast_c = val
+
+        if (self.filter_image_var.get()=='PR'):
+            if self.manual_contrast_r_var.get():
+                self.contrast_r = val
 
     def open_camera_settings(self):
         try:
@@ -716,11 +741,18 @@ class App(ctk.CTk):
 
         # Flips horizontally (it's normally inverted)
         self.arr_c = cv2.flip(self.arr_c, 1)
+
         # Image to be converted into image type
+        # The image is first contrast enhanced, gamma is the last filter to be applied
+        arr_c = self.arr_c
+
+        if self.manual_contrast_c_var.get():
+            arr_c = np.clip(arr_c*self.contrast_c, 0, 255)
+
         if self.manual_gamma_c_var.get():
-            self.im_c = self.arr2im(np.clip(self.arr_c+self.gamma_c*255, 0, 255))
-        else:
-            self.im_c = self.arr2im(self.arr_c)
+            arr_c = np.clip(arr_c + self.gamma_c*255, 0, 255)
+        
+        self.im_c = self.arr2im(arr_c)
 
         # Image to be shown
         self.img_c = self.create_image(self.im_c)
@@ -733,11 +765,17 @@ class App(ctk.CTk):
         # Processes and normalizes before doing the same thing
         self.arr_r = self.reconstruct(self.arr_c)
         self.arr_r = np.uint8(normalize(self.arr_r, 255))
+
+        arr_r = self.arr_r
         
+        if self.manual_contrast_r_var.get():
+            arr_r = np.clip(arr_r*self.contrast_r, 0, 255)
+
         if self.manual_gamma_r_var.get():
-            self.im_r = self.arr2im(np.clip(self.arr_r+self.gamma_r*255, 0, 255))   
-        else:
-            self.im_r = self.arr2im(self.arr_r)
+            arr_r = np.clip(arr_c + self.gamma_r*255, 0, 255)
+        
+        self.im_r = self.arr2im(arr_r)
+
         self.img_r = self.create_image(self.im_r)
         self.img_r._size = (self.width*self.scale, self.height*self.scale)
         self.processed_label.img = self.img_r
