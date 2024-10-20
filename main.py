@@ -69,9 +69,12 @@ class App(ctk.CTk):
         # Vars for choosing parameters in the parameters menu
         self.fix_r = ctk.BooleanVar(self, value=False)
         self.square_field = ctk.BooleanVar(self, value=False)
-        self.algorithm_var = ctk.StringVar(self, value='KR')
+        self.phase_r = ctk.BooleanVar(self, value=False)
+        self.algorithm_var = ctk.StringVar(self, value='AS')
         self.filter_image_var = ctk.StringVar(self, value='CA') # CA for captured by default
         
+        self.file_path = ''
+
         self.gamma_checkbox_var = ctk.BooleanVar(self, value=False)
         self.contrast_checkbox_var = ctk.BooleanVar(self, value=False)
 
@@ -103,6 +106,7 @@ class App(ctk.CTk):
         self.init_viewing_frame()
         self.init_parameters_frame()
         self.init_filters_frame()
+        self.init_saving_frame()
 
     def init_viewing_frame(self):
         # Frame for navigation
@@ -156,7 +160,7 @@ class App(ctk.CTk):
         self.it_button = ctk.CTkButton(self.navigation_frame, text='Image Tools', **mb_config)
         self.it_button.grid(row=3, column=0, **mb_grid_config)
 
-        self.so_button = ctk.CTkButton(self.navigation_frame, text='Saving Options', **mb_config)
+        self.so_button = ctk.CTkButton(self.navigation_frame, text='Saving Options', **mb_config, command=lambda: self.change_menu_to('so'))
         self.so_button.grid(row=4, column=0, **mb_grid_config)
 
 
@@ -326,15 +330,19 @@ class App(ctk.CTk):
         self.adit_options_frame.columnconfigure(0, weight=1)
         self.adit_options_frame.columnconfigure(1, weight=0)
         self.adit_options_frame.columnconfigure(2, weight=0)
-        self.adit_options_frame.columnconfigure(3, weight=1)
+        self.adit_options_frame.columnconfigure(3, weight=0)
+        self.adit_options_frame.columnconfigure(4, weight=1)
 
         self.adit_options_frame.grid_propagate(False)
 
-        self.fix_r_checkbox = ctk.CTkCheckBox(self.adit_options_frame, text='Fix reconstruction distance', variable=self.fix_r)
+        self.fix_r_checkbox = ctk.CTkCheckBox(self.adit_options_frame, text='Fix r', variable=self.fix_r)
         self.fix_r_checkbox.grid(row=1, column=1, sticky='ew', padx=10, pady=5)
 
         self.square_field_checkbox = ctk.CTkCheckBox(self.adit_options_frame, text='Show Intensity', variable=self.square_field)
         self.square_field_checkbox.grid(row=1, column=2, sticky='ew', padx=10, pady=5)
+
+        self.phase_r_checkbox = ctk.CTkCheckBox(self.adit_options_frame, text='Show Phase', variable=self.phase_r)
+        self.phase_r_checkbox.grid(row=1, column=3, sticky='nsew', padx=10, pady=5)
 
         # Frame for selecting the reconstruction method with radio buttons
         self.algorithm_frame = ctk.CTkFrame(self.parameters_frame, width=PARAMETER_FRAME_WIDTH, height=PARAMETER_FRAME_HEIGHT)
@@ -467,6 +475,70 @@ class App(ctk.CTk):
         
         self.home_button = ctk.CTkButton(self.filters_frame, text='Home', command=lambda: self.change_menu_to('home'))
         self.home_button.grid(row=8, column=0, pady=20, sticky='s')
+
+    def init_saving_frame(self):
+        # Frame to activate and configure image enhancement filters
+        self.so_frame = ctk.CTkFrame(self, corner_radius=8, width=SAVING_FRAME_WIDTH)
+        self.so_frame.grid_propagate(False)
+
+        self.main_title_so= ctk.CTkLabel(self.so_frame, text='Saving Options')
+        self.main_title_so.grid(row=0, column=0, padx=20, pady=40, sticky='nsew')
+
+        self.static_frame = ctk.CTkFrame(self.so_frame, width=SAVING_FRAME_WIDTH, height=SAVING_FRAME_HEIGHT)
+        self.static_frame.grid(row=1, column=0, sticky='ew', pady=2)
+        self.static_frame.grid_propagate(False)
+
+        self.static_frame.columnconfigure(0, weight=1)
+        self.static_frame.columnconfigure(1, weight=0)
+        self.static_frame.columnconfigure(2, weight=0)
+        self.static_frame.columnconfigure(3, weight=1)
+
+        self.static_button = ctk.CTkButton(self.static_frame, text='Use static image', command=self.selectfile)
+        self.static_button.grid(row=0, column=1, padx=20, pady=20)
+
+        self.real_button = ctk.CTkButton(self.static_frame, text='Real time view', command=self.return_to_stream)
+        self.real_button.grid(row=0, column=2, padx=20, pady=20)
+
+        self.nofilter_frame = ctk.CTkFrame(self.so_frame, width=SAVING_FRAME_WIDTH, height=SAVING_FRAME_HEIGHT)
+        self.nofilter_frame.grid(row=2, column=0, sticky='ew', pady=2)
+        self.nofilter_frame.grid_propagate(False)
+
+        self.nofilter_frame.columnconfigure(0, weight=1)
+        self.nofilter_frame.columnconfigure(1, weight=0)
+        self.nofilter_frame.columnconfigure(2, weight=0)
+        self.nofilter_frame.columnconfigure(3, weight=1)
+
+        self.nf_title_label = ctk.CTkLabel(self.nofilter_frame, text='Guardado sin filtros')
+        self.nf_title_label.grid(row=0, column=1, columnspan=2, padx=20, pady=5, sticky='nsew')
+
+        self.nf_c_button = ctk.CTkButton(self.nofilter_frame, text='Guardar captura', command=self.no_filter_save_c)
+        self.nf_c_button.grid(row=1, column=1, padx=20, pady=20)
+        self.nf_r_button = ctk.CTkButton(self.nofilter_frame, text='Guardar reconstrucción', command=self.no_filter_save_r)
+        self.nf_r_button.grid(row=1, column=2, padx=20, pady=20)
+
+
+        self.so_frame.rowconfigure(8, weight=1)
+        
+        self.home_button = ctk.CTkButton(self.so_frame, text='Home', command=lambda: self.change_menu_to('home'))
+        self.home_button.grid(row=8, column=0, pady=20, sticky='s')
+
+    def no_filter_save_c(self):
+        '''Saves a capture with an increasing number'''
+        i = 0
+        while os.path.exists("saves/capture/capture%s.bmp" % i):
+            i += 1
+        im_c = self.arr2im(self.arr_c)
+        im_c.save('saves/capture/capture%s.bmp' % i)
+
+    def no_filter_save_r(self):
+        '''Saves a reconstruction with an increasing number'''
+        i = 0
+        while os.path.exists("saves/reconstruction/reconstruction%s.bmp" % i):
+            i += 1
+
+        im_r = self.arr2im(self.arr_r)
+        im_r.save('saves/reconstruction/reconstruction%s.bmp' % i)
+
 
     def set_variables(self):
         try:
@@ -704,6 +776,11 @@ class App(ctk.CTk):
         else:
             self.filters_frame.grid_forget()
 
+        if name=='so':
+            self.so_frame.grid(row=0, column=0, sticky='nsew', padx=5)
+        else:
+            self.so_frame.grid_forget()
+
     def update_im_size(self, size):
         '''Updates scale from slider'''
         self.scale = size
@@ -740,71 +817,83 @@ class App(ctk.CTk):
         '''Changes between light and dark mode.'''
         ctk.set_appearance_mode(new_appearance_mode)
 
+    def selectfile(self):
+        self.file_path = ctk.filedialog.askopenfilename(title="Selecciona un archivo de imagen")
+        if self.file_path:
+            image = self.im2arr(self.file_path)  # Asumiendo que tienes una función 'read'
+            if image is not None:
+                self.arr_c = image
+
+    def return_to_stream(self):
+        self.file_path = ''
+
     def streaming(self):
         '''Handles capture and processing of the images from the camera'''
-        start_time = time.time() # For fps reading
 
-        # Obtains the array from the camera and converts to grayscale
-        self.arr_c= cv2.cvtColor(self.cap.read()[1], cv2.COLOR_BGR2GRAY)
+        start_time = time.time()  # Para medir el tiempo de fps
 
-        # Flips horizontally (it's normally inverted)
-        self.arr_c = cv2.flip(self.arr_c, 1)
+        # Si hay una imagen cargada desde un archivo
+        if self.file_path:
+            arr_c = self.arr_c  # Utiliza la imagen cargada
+            # alt = cv2.cvtColor(self.cap.read()[1], cv2.COLOR_BGR2GRAY)
+            # alt = cv2.flip(self.arr_c, 1)
 
-        # Image to be converted into image type
-        # The image is first contrast enhanced, gamma is the last filter to be applied
-        arr_c = self.arr_c
+            # Gets the actual resolution of the image
+            self.height, self.width = arr_c.shape
 
+            self.aspect_ratio = self.width/self.height
+
+
+        else:
+            # Lee la imagen desde la cámara
+            self.arr_c= cv2.cvtColor(self.cap.read()[1], cv2.COLOR_BGR2GRAY)
+            self.arr_c = cv2.flip(self.arr_c, 1)  # Voltea horizontalmente
+
+            arr_c = self.arr_c
+
+        # Aplicar procesamiento a la imagen
         if self.manual_contrast_c_var.get():
-            arr_c = np.clip(arr_c*self.contrast_c, 0, 255)
+            arr_c = np.clip(arr_c * self.contrast_c, 0, 255)
 
         if self.manual_gamma_c_var.get():
-            arr_c = np.clip(arr_c + self.gamma_c*255, 0, 255)
-        
-        self.im_c = self.arr2im(arr_c)
+            arr_c = np.clip(arr_c + self.gamma_c * 255, 0, 255)
 
-        # Image to be shown
+        self.im_c = self.arr2im(arr_c)  # Convierte el array a imagen
         self.img_c = self.create_image(self.im_c)
-        # Scales acording to scale
-        self.img_c._size = (self.width*self.scale, self.height*self.scale)
-        # Sets the image to the label
+        self.img_c._size = (self.width * self.scale, self.height * self.scale)
         self.captured_label.img = self.img_c
         self.captured_label.configure(image=self.img_c)
 
-        # Processes and normalizes before doing the same thing
-        self.arr_r = self.reconstruct(self.arr_c)
-        self.arr_r = np.uint8(normalize(self.arr_r, 255))
+        # Procesar y normalizar antes de mostrar
+        self.arr_r = self.reconstruct(self.arr_c)  # Asumiendo que tienes esta función
+        self.arr_r = np.uint8(normalize(self.arr_r, 255))  # Normaliza la imagen
 
         arr_r = self.arr_r
-        
+
         if self.manual_contrast_r_var.get():
-            arr_r = np.clip(arr_r*self.contrast_r, 0, 255)
+            arr_r = np.clip(arr_r * self.contrast_r, 0, 255)
 
         if self.manual_gamma_r_var.get():
-            arr_r = np.clip(arr_r + self.gamma_r*255, 0, 255)
-        
-        self.im_r = self.arr2im(arr_r)
+            arr_r = np.clip(arr_r + self.gamma_r * 255, 0, 255)
 
+        self.im_r = self.arr2im(arr_r)  # Convierte el array a imagen
         self.img_r = self.create_image(self.im_r)
-        self.img_r._size = (self.width*self.scale, self.height*self.scale)
+        self.img_r._size = (self.width * self.scale, self.height * self.scale)
         self.processed_label.img = self.img_r
         self.processed_label.configure(image=self.img_r)
 
-        end_time = time.time() # only these lines will count towards the fps since they take the most time
+        end_time = time.time()  # Solo estas líneas cuentan para el fps
 
-        elapsed_time = end_time-start_time
-
-        self.fps = round(1/elapsed_time, 1)
+        elapsed_time = end_time - start_time
+        self.fps = round(1 / elapsed_time, 1)
         self.fps_label.configure(text=f'FPS: {self.fps}')
 
-        # Queues the function to execute 30 milliseconds after reaching this line
-        # Ideally, the delay should be exactly the same time that it takes for 
-        # the function to reach this line since otherwise, time is wasted
-        # however, this is impossible to do without implementing parallelization because
-        # it's very hard to predict the fps since it's exposure (takes time, reduces fps) and resolution dependent
+        # Repite la función después de 30 ms
         self.after(30, self.streaming)
 
     def reconstruct(self, img):
-        field = np.sqrt(img)
+        field = np.sqrt(normalize(img, 1))
+
 
         if self.algorithm_var.get() == 'AS':
             recon = propagate(field, self.r, self.wavelength, self.dxy, self.dxy, self.scale_factor)
@@ -812,13 +901,17 @@ class App(ctk.CTk):
             deltaX = self.Z*self.dxy/self.L
             recon = kreuzer3F(field, self.Z, self.L, self.wavelength, self.dxy, deltaX, self.FC)
 
-        if self.square_field.get():
+        if self.square_field.get() and not self.phase_r.get():
             return normalize(np.abs(recon)**2, 1)
+        elif not self.square_field.get() and self.phase_r.get():
+            return normalize(np.angle(recon), 1)
+        elif self.square_field.get() and self.phase_r.get():
+            return normalize(np.angle(recon), 1)
         else:
             return normalize(np.abs(recon), 1)
         
+        
         # comment
-
 
     def check_current_FC(self):
         self.FC = filtcosenoF(self.cosine_period, np.array((self.width, self.height)))

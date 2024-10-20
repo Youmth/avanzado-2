@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy as sc
+import cv2
+from PIL import Image
 from skimage.util import view_as_windows
 from matplotlib.animation import FuncAnimation
 from sklearn.cluster import KMeans
@@ -63,13 +65,10 @@ def read(filename:str, path:str = '') -> np.ndarray:
     else:
         prefix = ''
 
-    holo = plt.imread(prefix + filename).astype(np.float64)
+    im = cv2.imread(prefix + filename, cv2.IMREAD_GRAYSCALE) #you can pass multiple arguments in single line
 
-    if len(np.shape(holo)) > 2:
-        # If the image is RGB, use only one channel (assume grayscale image)
-        holo = holo[:,:,0]
+    return im.astype(np.float64)
 
-    return holo
 
 
 def filter_mask(holo:np.ndarray,
@@ -110,8 +109,14 @@ def filter_mask(holo:np.ndarray,
 
 def normalize(x: np.ndarray, scale: float) -> np.ndarray:
     '''Normalize every value of an array to the 0-scale interval.'''
+    x = x.astype(np.float64)
 
-    return scale*(x-np.min(x))/(np.max(x)-np.min(x))
+    min_val = np.min(x)
+    max_val = np.max(x)
+    
+    normalized_image = scale*(x - min_val) / (max_val - min_val)
+
+    return normalized_image
 
 
 def metric( holo_rec:np.ndarray,
