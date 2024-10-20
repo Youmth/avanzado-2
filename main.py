@@ -4,9 +4,9 @@ import cv2
 import time
 import os
 from PIL import Image, ImageTk
+from kreuzer_functions import kreuzer3F, filtcosenoF, prepairholoF, point_src
 from settings import *
 from _3DHR_Utilities import *
-from kreuzer_functions import *
 
 
 class App(ctk.CTk):
@@ -63,12 +63,13 @@ class App(ctk.CTk):
 
         # FC parameter setting
         self.cosine_period = DEFAULT_COSINE_PERIOD
-        self.size_filter = DEFAULT_SIZE_FILTER
+
+        self.FC = filtcosenoF(self.cosine_period, np.array((self.width, self.height)))
 
         # Vars for choosing parameters in the parameters menu
         self.fix_r = ctk.BooleanVar(self, value=False)
         self.square_field = ctk.BooleanVar(self, value=False)
-        self.algorithm_var = ctk.StringVar(self, value='AS')
+        self.algorithm_var = ctk.StringVar(self, value='KR')
         self.filter_image_var = ctk.StringVar(self, value='CA') # CA for captured by default
         
         self.gamma_checkbox_var = ctk.BooleanVar(self, value=False)
@@ -808,26 +809,27 @@ class App(ctk.CTk):
         if self.algorithm_var.get() == 'AS':
             recon = propagate(field, self.r, self.wavelength, self.dxy, self.dxy, self.scale_factor)
         elif self.algorithm_var.get() == 'KR':
-            recon = field
+            deltaX = self.Z*self.dxy/self.L
+            recon = kreuzer3F(field, self.Z, self.L, self.wavelength, self.dxy, deltaX, self.FC)
 
         if self.square_field.get():
-            return np.abs(recon)**2
+            return normalize(np.abs(recon)**2, 1)
         else:
-            return np.abs(recon)
+            return normalize(np.abs(recon), 1)
         
         # comment
 
+
     def check_current_FC(self):
-        plt.imshow(filtcosenoF(self.cosine_period, self.size_filter), cmap='gray')
+        self.FC = filtcosenoF(self.cosine_period, np.array((self.width, self.height)))
+        plt.imshow(self.FC, cmap='gray')
         plt.show()
 
-    def set_FC_param(self, cosine_period, size_filter):
+    def set_FC_param(self, cosine_period):
         self.cosine_period = cosine_period
-        self.size_filter = size_filter
 
     def reset_FC_param(self):
         self.cosine_period = DEFAULT_COSINE_PERIOD
-        self.size_filter = DEFAULT_SIZE_FILTER
 
         
 
