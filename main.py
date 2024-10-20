@@ -6,6 +6,7 @@ import os
 from PIL import Image, ImageTk
 from settings import *
 from _3DHR_Utilities import *
+from kreuzer_functions import *
 
 
 class App(ctk.CTk):
@@ -59,6 +60,10 @@ class App(ctk.CTk):
         self.wavelength = DEFAULT_WAVELENGTH #Microns
         self.dxy = DEFAULT_DXY #Microns
         self.scale_factor = self.L/self.Z#
+
+        # FC parameter setting
+        self.cosine_period = DEFAULT_COSINE_PERIOD
+        self.size_filter = DEFAULT_SIZE_FILTER
 
         # Vars for choosing parameters in the parameters menu
         self.fix_r = ctk.BooleanVar(self, value=False)
@@ -812,8 +817,23 @@ class App(ctk.CTk):
         
         # comment
 
+    def check_current_FC(self):
+        plt.imshow(filtcosenoF(self.cosine_period, self.size_filter), cmap='gray')
+        plt.show()
+
+    def set_FC_param(self, cosine_period, size_filter):
+        self.cosine_period = cosine_period
+        self.size_filter = size_filter
+
+    def reset_FC_param(self):
+        self.cosine_period = DEFAULT_COSINE_PERIOD
+        self.size_filter = DEFAULT_SIZE_FILTER
+
+        
+
 
 if __name__=='__main__':
     app = App()
+    #app.check_current_FC()
     app.streaming()
     app.mainloop()
