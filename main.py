@@ -7,6 +7,7 @@ from PIL import Image, ImageTk
 from kreuzer_functions import kreuzer3F, filtcosenoF, prepairholoF, point_src
 from settings import *
 from _3DHR_Utilities import *
+from skimage import data, exposure, filters
 
 
 class App(ctk.CTk):
@@ -77,16 +78,31 @@ class App(ctk.CTk):
 
         self.gamma_checkbox_var = ctk.BooleanVar(self, value=False)
         self.contrast_checkbox_var = ctk.BooleanVar(self, value=False)
+        self.adaptative_eq_checkbox_var = ctk.BooleanVar(self, value=False)
+        self.highpass_checkbox_var = ctk.BooleanVar(self, value=False)
+        self.lowpass_checkbox_var = ctk.BooleanVar(self, value=False)
 
         self.manual_gamma_c_var = ctk.BooleanVar(self, value=False)
         self.manual_gamma_r_var = ctk.BooleanVar(self, value=False)
         self.manual_contrast_c_var = ctk.BooleanVar(self, value=False)
         self.manual_contrast_r_var = ctk.BooleanVar(self, value=False)
+        self.manual_adaptative_eq_c_var = ctk.BooleanVar(self, value=False)
+        self.manual_adaptative_eq_r_var = ctk.BooleanVar(self, value=False)
+        self.manual_highpass_c_var = ctk.BooleanVar(self, value=False)
+        self.manual_highpass_r_var = ctk.BooleanVar(self, value=False)
+        self.manual_lowpass_c_var = ctk.BooleanVar(self, value=False)
+        self.manual_lowpass_r_var = ctk.BooleanVar(self, value=False)
 
         self.gamma_c = 0
         self.gamma_r = 0
         self.contrast_c = 0
         self.contrast_r = 0
+        self.adaptative_eq_c = False
+        self.adaptative_eq_r = False
+        self.highpass_c = 0
+        self.highpass_r = 0
+        self.lowpass_c = 0
+        self.lowpass_r = 0
 
         # Arrays and images for the captured and reconstructed matrices
         self.arr_c = np.zeros((int(self.width), int(self.height)))
@@ -427,10 +443,10 @@ class App(ctk.CTk):
         self.filters_frame = ctk.CTkFrame(self, corner_radius=8, width=FILTER_FRAME_WIDTH)
         self.filters_frame.grid_propagate(False)
 
-        self.main_title_filters= ctk.CTkLabel(self.filters_frame, text='Filters')
+        self.main_title_filters = ctk.CTkLabel(self.filters_frame, text='Filters')
         self.main_title_filters.grid(row=0, column=0, padx=20, pady=40, sticky='nsew')
 
-        # Frame for selecting the image with radio buttons  for the filter to be applied
+        # Frame for selecting the image with radio buttons for the filter to be applied
         self.choose_image_frame = ctk.CTkFrame(self.filters_frame, width=FILTER_FRAME_WIDTH, height=FILTER_FRAME_HEIGHT)
         self.choose_image_frame.grid(row=1, column=0, sticky='ew', pady=2)
         self.choose_image_frame.grid_propagate(False)
@@ -449,6 +465,7 @@ class App(ctk.CTk):
         self.pr_image_radio = ctk.CTkRadioButton(self.choose_image_frame, text='Processed image', variable=self.filter_image_var, value='PR', command=self.update_image_filters)
         self.pr_image_radio.grid(row=1, column=2, sticky='ew', padx=10, pady=5)
 
+        # Gamma filter section
         self.gamma_frame = ctk.CTkFrame(self.filters_frame, width=FILTER_FRAME_WIDTH, height=FILTER_FRAME_HEIGHT)
         self.gamma_frame.grid(row=2, column=0, sticky='ew', pady=2)
         self.gamma_frame.grid_propagate(False)
@@ -460,6 +477,7 @@ class App(ctk.CTk):
         self.gamma_slider.grid(row=1, column=0, sticky='ew', pady=10, padx=10)
         self.gamma_slider.setvar(value=0)
 
+        # Contrast filter section
         self.contrast_frame = ctk.CTkFrame(self.filters_frame, width=FILTER_FRAME_WIDTH, height=FILTER_FRAME_HEIGHT)
         self.contrast_frame.grid(row=3, column=0, sticky='ew', pady=2)
         self.contrast_frame.grid_propagate(False)
@@ -471,8 +489,42 @@ class App(ctk.CTk):
         self.contrast_slider.grid(row=1, column=0, sticky='ew', pady=10, padx=10)
         self.contrast_slider.setvar(value=1)
 
+        # Adaptive Equalization filter section (Ecualización adaptativa)
+        self.adaptative_eq_frame = ctk.CTkFrame(self.filters_frame, width=FILTER_FRAME_WIDTH, height=FILTER_FRAME_HEIGHT)
+        self.adaptative_eq_frame.grid(row=4, column=0, sticky='ew', pady=2)
+        self.adaptative_eq_frame.grid_propagate(False)
+
+        self.adaptative_eq_checkbox = ctk.CTkCheckBox(self.adaptative_eq_frame, text='Adaptive Equalization', variable=self.adaptative_eq_checkbox_var, command=self.update_manual_filter)
+        self.adaptative_eq_checkbox.grid(row=0, column=0, sticky='ew', pady=10, padx=10)
+
+        # High-Pass Butterworth filter section
+        self.highpass_frame = ctk.CTkFrame(self.filters_frame, width=FILTER_FRAME_WIDTH, height=FILTER_FRAME_HEIGHT)
+        self.highpass_frame.grid(row=5, column=0, sticky='ew', pady=2)
+        self.highpass_frame.grid_propagate(False)
+
+        self.highpass_checkbox = ctk.CTkCheckBox(self.highpass_frame, text='High-Pass Butterworth filter', variable=self.highpass_checkbox_var, command=self.update_manual_filter)
+        self.highpass_checkbox.grid(row=0, column=0, sticky='ew', pady=10, padx=10)
+
+        self.highpass_slider = ctk.CTkSlider(self.highpass_frame, height=SLIDER_HEIGHT, from_=MIN_CUTOFF, to=MAX_CUTOFF, command=self.adjust_highpass)
+        self.highpass_slider.grid(row=1, column=0, sticky='ew', pady=10, padx=10)
+        self.highpass_slider.setvar(value=DEFAULT_CUTOFF)
+
+        # Low-Pass Butterworth filter section (Nuevo filtro Low-Pass)
+        self.lowpass_frame = ctk.CTkFrame(self.filters_frame, width=FILTER_FRAME_WIDTH, height=FILTER_FRAME_HEIGHT)
+        self.lowpass_frame.grid(row=6, column=0, sticky='ew', pady=2)
+        self.lowpass_frame.grid_propagate(False)
+
+        self.lowpass_checkbox = ctk.CTkCheckBox(self.lowpass_frame, text='Low-Pass Butterworth filter', variable=self.lowpass_checkbox_var, command=self.update_manual_filter)
+        self.lowpass_checkbox.grid(row=0, column=0, sticky='ew', pady=10, padx=10)
+
+        self.lowpass_slider = ctk.CTkSlider(self.lowpass_frame, height=SLIDER_HEIGHT, from_=MIN_CUTOFF, to=MAX_CUTOFF, command=self.adjust_lowpass)
+        self.lowpass_slider.grid(row=1, column=0, sticky='ew', pady=10, padx=10)
+        self.lowpass_slider.setvar(value=DEFAULT_CUTOFF)
+
+        # Row configuration
         self.filters_frame.rowconfigure(8, weight=1)
-        
+
+        # Home button
         self.home_button = ctk.CTkButton(self.filters_frame, text='Home', command=lambda: self.change_menu_to('home'))
         self.home_button.grid(row=8, column=0, pady=20, sticky='s')
 
@@ -539,7 +591,6 @@ class App(ctk.CTk):
         im_r = self.arr2im(self.arr_r)
         im_r.save('saves/reconstruction/reconstruction%s.bmp' % i)
 
-
     def set_variables(self):
         try:
             self.wavelength = float(self.lambda_entry.get())
@@ -561,25 +612,49 @@ class App(ctk.CTk):
             self.gamma_slider.set(self.gamma_c)
             self.contrast_checkbox_var.set(value=self.manual_contrast_c_var.get())
             self.contrast_slider.set(self.contrast_c)
+            self.adaptative_eq_checkbox_var.set(value=self.manual_adaptative_eq_c_var.get())
+            self.highpass_checkbox_var.set(value=self.manual_highpass_c_var.get())
+            self.lowpass_checkbox_var.set(value=self.manual_lowpass_c_var.get())
         elif self.filter_image_var.get()=='PR':
             self.gamma_checkbox_var.set(value=self.manual_gamma_r_var.get())
             self.gamma_slider.set(self.gamma_r)
             self.contrast_checkbox_var.set(value=self.manual_contrast_r_var.get())
             self.contrast_slider.set(self.contrast_r)
+            self.adaptative_eq_checkbox_var.set(value=self.manual_adaptative_eq_r_var.get())
+            self.highpass_checkbox_var.set(value=self.manual_highpass_r_var.get())
+            self.lowpass_checkbox_var.set(value=self.manual_lowpass_r_var.get())
 
     def update_manual_filter(self):
         if self.filter_image_var.get()=='CA':
             self.manual_gamma_c_var.set(value=self.gamma_checkbox_var.get())
             self.manual_contrast_c_var.set(value=self.contrast_checkbox_var.get())
+            self.manual_adaptative_eq_c_var.set(value=self.adaptative_eq_checkbox_var.get())
+            self.manual_highpass_c_var.set(value=self.highpass_checkbox_var.get())
+            self.manual_lowpass_c_var.set(value=self.lowpass_checkbox_var.get())
         elif self.filter_image_var.get()=='PR':
             self.manual_gamma_r_var.set(value=self.gamma_checkbox_var.get())
             self.manual_contrast_r_var.set(value=self.contrast_checkbox_var.get())
+            self.manual_adaptative_eq_r_var.set(value=self.adaptative_eq_checkbox_var.get())
+            self.manual_highpass_r_var.set(value=self.highpass_checkbox_var.get())
+            self.manual_lowpass_r_var.set(value=self.lowpass_checkbox_var.get())
+
 
         if self.manual_gamma_c_var.get() or self.manual_gamma_r_var.get():
             self.adjust_gamma(self.gamma_slider.get())
 
         if self.manual_contrast_c_var.get() or self.manual_contrast_r_var.get():
             self.adjust_contrast(self.contrast_slider.get())
+
+        if self.manual_adaptative_eq_c_var.get() or self.manual_adaptative_eq_r_var.get():
+            self.adjust_adaptative_eq()
+
+        if self.manual_highpass_c_var.get() or self.manual_highpass_r_var.get():
+            self.adjust_highpass(self.highpass_slider.get())
+
+        if self.manual_lowpass_c_var.get() or self.manual_lowpass_r_var.get():
+            self.adjust_highpass(self.lowpass_slider.get())
+
+            
 
     def adjust_gamma(self, val):
         if (self.filter_image_var.get()=='CA'):
@@ -598,6 +673,34 @@ class App(ctk.CTk):
         if (self.filter_image_var.get()=='PR'):
             if self.manual_contrast_r_var.get():
                 self.contrast_r = val
+
+    def adjust_adaptative_eq(self):
+        if (self.filter_image_var.get()=='CA'):
+            if self.manual_adaptative_eq_c_var.get():
+                self.adaptative_eq_c = True
+            
+        if (self.filter_image_var.get()=='PR'):
+            if self.manual_adaptative_eq_r_var.get():
+                self.adaptative_eq_r = True
+
+    def adjust_highpass(self, val):
+        if (self.filter_image_var.get()=='CA'):
+            if self.manual_highpass_c_var.get():
+                self.highpass_c = val
+            
+        if self.filter_image_var.get()=='PR':
+            if self.manual_highpass_r_var.get():
+                self.highpass_r = val
+
+    def adjust_lowpass(self, val):
+        if (self.filter_image_var.get()=='CA'):
+            if self.manual_lowpass_c_var.get():
+                self.lowpass_c = val
+            
+        if self.filter_image_var.get()=='PR':
+            if self.manual_lowpass_r_var.get():
+                self.lowpass_r = val
+
 
     def open_camera_settings(self):
         try:
@@ -858,6 +961,19 @@ class App(ctk.CTk):
         if self.manual_gamma_c_var.get():
             arr_c = np.clip(arr_c + self.gamma_c * 255, 0, 255)
 
+        if self.manual_adaptative_eq_c_var.get():
+            arr_c = exposure.equalize_adapthist(normalize(arr_c, 1), clip_limit=DEFAULT_CLIP_LIMIT)
+            arr_c = np.uint8(arr_c * 255)  # Convertir de 0-1 a 0-255
+
+        if self.manual_highpass_c_var.get():
+            arr_c = filters.butterworth(normalize(arr_c, 1), self.highpass_c, high_pass=True)
+            arr_c = np.uint8(arr_c*255)
+
+        if self.manual_lowpass_c_var.get():
+            arr_c = filters.butterworth(normalize(arr_c, 1), self.lowpass_c, high_pass=False)
+            arr_c = np.uint8(arr_c*255)
+
+
         self.im_c = self.arr2im(arr_c)  # Convierte el array a imagen
         self.img_c = self.create_image(self.im_c)
         self.img_c._size = (self.width * self.scale, self.height * self.scale)
@@ -875,6 +991,19 @@ class App(ctk.CTk):
 
         if self.manual_gamma_r_var.get():
             arr_r = np.clip(arr_r + self.gamma_r * 255, 0, 255)
+
+        if self.manual_adaptative_eq_r_var.get():
+            arr_r = exposure.equalize_adapthist(normalize(arr_r, 1), clip_limit=DEFAULT_CLIP_LIMIT)
+            arr_r = np.uint8(arr_r * 255)  # Convertir de 0-1 a 0-255
+
+        if self.manual_highpass_r_var.get():
+            arr_r = filters.butterworth(normalize(arr_r, 1), self.highpass_r, high_pass=True)
+            arr_r = np.uint8(arr_r*255)
+
+        if self.manual_lowpass_r_var.get():
+            arr_r = filters.butterworth(normalize(arr_r, 1), self.lowpass_r, high_pass=False)
+            arr_r = np.uint8(arr_r*255)
+
 
         self.im_r = self.arr2im(arr_r)  # Convierte el array a imagen
         self.img_r = self.create_image(self.im_r)
