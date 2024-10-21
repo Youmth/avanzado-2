@@ -614,7 +614,10 @@ class App(ctk.CTk):
             self.contrast_slider.set(self.contrast_c)
             self.adaptative_eq_checkbox_var.set(value=self.manual_adaptative_eq_c_var.get())
             self.highpass_checkbox_var.set(value=self.manual_highpass_c_var.get())
+            self.highpass_slider.set(self.highpass_c)
             self.lowpass_checkbox_var.set(value=self.manual_lowpass_c_var.get())
+            self.lowpass_slider.set(self.lowpass_c)
+            
         elif self.filter_image_var.get()=='PR':
             self.gamma_checkbox_var.set(value=self.manual_gamma_r_var.get())
             self.gamma_slider.set(self.gamma_r)
@@ -622,7 +625,9 @@ class App(ctk.CTk):
             self.contrast_slider.set(self.contrast_r)
             self.adaptative_eq_checkbox_var.set(value=self.manual_adaptative_eq_r_var.get())
             self.highpass_checkbox_var.set(value=self.manual_highpass_r_var.get())
+            self.highpass_slider.set(self.highpass_r)
             self.lowpass_checkbox_var.set(value=self.manual_lowpass_r_var.get())
+            self.lowpass_slider.set(self.lowpass_r)
 
     def update_manual_filter(self):
         if self.filter_image_var.get()=='CA':
@@ -650,9 +655,11 @@ class App(ctk.CTk):
 
         if self.manual_highpass_c_var.get() or self.manual_highpass_r_var.get():
             self.adjust_highpass(self.highpass_slider.get())
+            print(self.highpass_slider.get())
 
         if self.manual_lowpass_c_var.get() or self.manual_lowpass_r_var.get():
             self.adjust_highpass(self.lowpass_slider.get())
+            print(self.lowpass_slider.get())
 
             
 
