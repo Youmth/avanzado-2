@@ -198,7 +198,7 @@ def kreuzer3F(hologram, z, L, wavelength, dx, deltaX, FC):
     if T1.shape != FC.shape:
         T1 = np.pad(T1, ((pad, pad), (pad, pad)), mode='constant')
 
-    K = ang_spectrum(T1, L-z, wavelength, deltaX, deltaY)
+    K = ang_spectrum(T1, -(L-z), wavelength, deltaX, deltaY)
     #K = K[pad:pad + n_rows, pad:pad + n_rows]
     #K = np.abs(K) ** 2
     #K = normalize(K)
