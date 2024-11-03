@@ -112,9 +112,12 @@ def normalize(x: np.ndarray, scale: float) -> np.ndarray:
     x = x.astype(np.float64)
 
     min_val = np.min(x)
-    max_val = np.max(x)
-    
-    normalized_image = scale*(x - min_val) / (max_val - min_val)
+
+    x = x-min_val
+
+    max_val = np.max(x) if np.max(x)!=0 else 1
+
+    normalized_image = scale*x / max_val
 
     return normalized_image
 

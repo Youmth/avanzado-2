@@ -3,6 +3,7 @@ import customtkinter as ctk
 import cv2
 import time
 import os
+from multiprocessing import Process, Queue
 from PIL import Image, ImageTk
 from kreuzer_functions import kreuzer3F, filtcosenoF, prepairholoF, point_src
 from settings import *
@@ -53,7 +54,7 @@ class App(ctk.CTk):
         self.MAX_Z = INIT_MAX_L
         self.MIN_R = INIT_MIN_L
         self.MAX_R = INIT_MAX_L
-
+        
         # Physical parameters for reconstructions
         self.L = INIT_L
         self.Z = INIT_Z
@@ -117,6 +118,51 @@ class App(ctk.CTk):
         self.img_r._size = (self.width*self.scale, self.height*self.scale)
 
         self.fps = 0
+
+        self.recon_parameters = [self.arr_c,
+                                 self.arr_r,
+                                 self.algorithm_var.get(),
+                                 self.L,
+                                 self.Z,
+                                 self.r,
+                                 self.wavelength,
+                                 self.dxy,
+                                 self.scale_factor,
+                                 self.FC,
+                                 self.square_field.get(),
+                                 self.phase_r.get()]
+
+        self.captured_q = Queue()
+        self.recon_q = Queue()
+        self.algorithm_q = Queue()
+        self.L_q = Queue()
+        self.Z_q = Queue()
+        self.r_q = Queue()
+        self.wavelength_q = Queue()
+        self.dxy_q = Queue()
+        self.scale_factor_q = Queue()
+        self.FC_q = Queue()
+        self.squared_q = Queue()
+        self.phase_q = Queue()
+
+        self.queues =   (self.captured_q,
+                    self.recon_q,
+                    self.algorithm_q,
+                    self.L_q,
+                    self.Z_q,
+                    self.r_q,
+                    self.wavelength_q,
+                    self.dxy_q,
+                    self.scale_factor_q,
+                    self.FC_q,
+                    self.squared_q,
+                    self.phase_q)
+        
+        for queue, parameter in zip(self.queues, self.recon_parameters):
+            queue.put(parameter)
+
+        self.reconstruction = Process(target=reconstruct, args=self.queues)
+        self.reconstruction.start()
 
         # Initialize all the elements of the gui at the same time, only once
         self.init_viewing_frame()
@@ -937,7 +983,7 @@ class App(ctk.CTk):
     def return_to_stream(self):
         self.file_path = ''
 
-    def streaming(self):
+    def draw(self):
         '''Handles capture and processing of the images from the camera'''
 
         start_time = time.time()  # Para medir el tiempo de fps
@@ -945,8 +991,6 @@ class App(ctk.CTk):
         # Si hay una imagen cargada desde un archivo
         if self.file_path:
             arr_c = self.arr_c  # Utiliza la imagen cargada
-            # alt = cv2.cvtColor(self.cap.read()[1], cv2.COLOR_BGR2GRAY)
-            # alt = cv2.flip(self.arr_c, 1)
 
             # Gets the actual resolution of the image
             self.height, self.width = arr_c.shape
@@ -960,6 +1004,24 @@ class App(ctk.CTk):
             self.arr_c = cv2.flip(self.arr_c, 1)  # Voltea horizontalmente
 
             arr_c = self.arr_c
+
+
+        self.recon_parameters = [self.arr_c,
+                        self.arr_r,
+                        self.algorithm_var.get(),
+                        self.L,
+                        self.Z,
+                        self.r,
+                        self.wavelength,
+                        self.dxy,
+                        self.scale_factor,
+                        self.FC,
+                        self.square_field.get(),
+                        self.phase_r.get()]
+
+        for queue, parameter in zip(self.queues, self.recon_parameters):
+            if queue.empty():
+                queue.put(parameter)
 
         # Aplicar procesamiento a la imagen
         if self.manual_contrast_c_var.get():
@@ -987,9 +1049,11 @@ class App(ctk.CTk):
         self.captured_label.img = self.img_c
         self.captured_label.configure(image=self.img_c)
 
-        # Procesar y normalizar antes de mostrar
-        self.arr_r = self.reconstruct(self.arr_c)  # Asumiendo que tienes esta función
-        self.arr_r = np.uint8(normalize(self.arr_r, 255))  # Normaliza la imagen
+        if not self.recon_q.empty():
+            # Procesar y normalizar antes de mostrar
+            self.arr_r = self.recon_q.get() # Asumiendo que tienes esta función
+            self.arr_r = np.uint8(normalize(self.arr_r, 255))  # Normaliza la imagen
+
 
         arr_r = self.arr_r
 
@@ -1025,29 +1089,7 @@ class App(ctk.CTk):
         self.fps_label.configure(text=f'FPS: {self.fps}')
 
         # Repite la función después de 30 ms
-        self.after(30, self.streaming)
-
-    def reconstruct(self, img):
-        field = np.sqrt(normalize(img, 1))
-
-
-        if self.algorithm_var.get() == 'AS':
-            recon = propagate(field, self.r, self.wavelength, self.dxy, self.dxy, self.scale_factor)
-        elif self.algorithm_var.get() == 'KR':
-            deltaX = self.Z*self.dxy/self.L
-            recon = kreuzer3F(field, self.Z, self.L, self.wavelength, self.dxy, deltaX, self.FC)
-
-        if self.square_field.get() and not self.phase_r.get():
-            return normalize(np.abs(recon)**2, 1)
-        elif not self.square_field.get() and self.phase_r.get():
-            return normalize(np.angle(recon), 1)
-        elif self.square_field.get() and self.phase_r.get():
-            return normalize(np.angle(recon), 1)
-        else:
-            return normalize(np.abs(recon), 1)
-        
-        
-        # comment
+        self.after(30, self.draw)
 
     def check_current_FC(self):
         self.FC = filtcosenoF(self.cosine_period, np.array((self.width, self.height)))
@@ -1060,11 +1102,71 @@ class App(ctk.CTk):
     def reset_FC_param(self):
         self.cosine_period = DEFAULT_COSINE_PERIOD
 
-        
+    def release(self):
+        self.reconstruction.terminate()
+        self.cap.release()
+
+def reconstruct(image:Queue,
+                output:Queue,
+                algorithm:Queue,
+                L:Queue,
+                Z:Queue,
+                r:Queue,
+                wavelength:Queue,
+                dxy:Queue, 
+                scale_factor:Queue,
+                FC:Queue,
+                squared:Queue,
+                phase:Queue
+                ):
+    while True:
+        if not (image.empty() or
+                algorithm.empty() or
+                L.empty() or
+                Z.empty() or
+                r.empty() or
+                wavelength.empty() or
+                dxy.empty() or
+                scale_factor.empty() or
+                FC.empty() or
+                squared.empty() or 
+                phase.empty()):
+
+            field = np.sqrt(normalize(image.get(), 1))
+
+            alg = algorithm.get()
+            dxy_ = dxy.get()
+            L_ = L.get()
+            Z_ = Z.get()
+            r_ = r.get()
+            wavelength_ = wavelength.get()
+            scale_factor_ = scale_factor.get()
+            FC_ = FC.get()
+
+
+            if alg == 'AS':
+                recon = propagate(field, r_, wavelength_, dxy_, dxy_, scale_factor_)
+            elif alg == 'KR':
+                deltaX = Z_*dxy_/L_
+                recon = kreuzer3F(field, Z_, L_, wavelength_, dxy_, deltaX, FC_)
+
+            sq = squared.get()
+            ph = phase.get()
+
+            if output.empty():
+
+                if sq:
+                    output.put(normalize(np.abs(recon)**2, 1))
+                elif not sq and ph:
+                    output.put(normalize(np.angle(recon), 1))
+                else:
+                    output.put(normalize(np.abs(recon), 1))   
+
 
 
 if __name__=='__main__':
     app = App()
     #app.check_current_FC()
-    app.streaming()
+    app.draw()
     app.mainloop()
+    app.release()
