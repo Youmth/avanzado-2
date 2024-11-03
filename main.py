@@ -990,7 +990,7 @@ class App(ctk.CTk):
                         self.phase_r.get()]
 
         for queue, parameter in zip(self.recon_queues, self.recon_parameters):
-            if queue.empty():
+            if queue.empty() and queue!=self.captured_q:
                 queue.put(parameter)
         
         if self.file_path_q.empty():
@@ -1071,7 +1071,6 @@ class App(ctk.CTk):
         self.fps = round(1 / elapsed_time, 1)
         self.fps_label.configure(text=f'FPS: {self.fps}')
 
-        # Repite la función después de 30 ms
         self.after(15, self.draw)
 
     def check_current_FC(self):
@@ -1127,9 +1126,8 @@ def capture(image:Queue,
         
     while True:
         # Captura la imagen de la cámara
-        ret, frame = cap.read()
-        if not ret:
-            continue
+        img= cv2.cvtColor(cap.read()[1], cv2.COLOR_BGR2GRAY)
+        img = cv2.flip(img, 1)  # Voltea horizontalmente
 
         if not path.empty():
             path_ = path.get()
@@ -1139,11 +1137,6 @@ def capture(image:Queue,
 
                 # Gets the actual resolution of the image
                 height_, width_ = img.shape
-
-            else:
-                # Lee la imagen desde la cámara
-                img= cv2.cvtColor(cap.read()[1], cv2.COLOR_BGR2GRAY)
-                img = cv2.flip(img, 1)  # Voltea horizontalmente
 
         if not settings.empty():
             if settings.get():
