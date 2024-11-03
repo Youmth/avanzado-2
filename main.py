@@ -4,11 +4,11 @@ import cv2
 import time
 import os
 from multiprocessing import Process, Queue
-from PIL import Image, ImageTk
-from kreuzer_functions import kreuzer3F, filtcosenoF, prepairholoF, point_src
+from PIL import Image
+from kreuzer_functions import kreuzer3F, filtcosenoF
 from settings import *
 from _3DHR_Utilities import *
-from skimage import data, exposure, filters
+from skimage import exposure, filters
 
 
 class App(ctk.CTk):
@@ -101,10 +101,13 @@ class App(ctk.CTk):
 
         self.fps = 0
 
+        self.settings = False
+
         self.capture_parameters = [self.arr_c, 
                                     self.file_path,
                                     self.width,
-                                    self.height]
+                                    self.height,
+                                    self.settings]
 
         self.recon_parameters = [self.arr_c,
                                  self.arr_r,
@@ -135,10 +138,13 @@ class App(ctk.CTk):
         self.width_q = Queue()
         self.height_q = Queue()
 
+        self.settings_q = Queue()
+
         self.capture_queues = (self.captured_q,
                                self.file_path_q,
                                self.width_q,
-                               self.height_q)
+                               self.height_q,
+                               self.settings_q)
 
         self.recon_queues =   (self.captured_q,
                     self.recon_q,
@@ -271,7 +277,7 @@ class App(ctk.CTk):
         self.save_processed_button = ctk.CTkButton(self.saving_frame, text='Save Reconstruction', command=self.save_processed)
         self.save_processed_button.grid(row=0, column=3, padx=20, pady=20)
         
-        self.camera_settings_button = ctk.CTkButton(self.saving_frame, text='Open Camera Settings', command=self.open_camera_settings)
+        self.camera_settings_button = ctk.CTkButton(self.saving_frame, text='Open Camera Settings', command=lambda:self.settings_q.put(True))
         self.camera_settings_button.grid(row=0, column=4, padx=20, pady=20)
 
         # For displaying frames per second (actual real life time, not tick time)
@@ -753,13 +759,6 @@ class App(ctk.CTk):
             if self.manual_lowpass_r_var.get():
                 self.lowpass_r = val
 
-
-    def open_camera_settings(self):
-        try:
-            self.cap.set(cv2.CAP_PROP_SETTINGS, 0)
-        except:
-            print('Cannot access camera settings.')
-
     def update_parameters(self):
         '''Updates all slider values, magnification and scale factor'''
         self.Z_slider_title.configure(text=f'Distancia entre la muestra y la fuente (Z): {round(self.Z, 4)}')
@@ -967,13 +966,15 @@ class App(ctk.CTk):
                 self.file_path_q.put(self.file_path)
 
     def return_to_stream(self):
+        self.file_path = ''
         if self.file_path_q.empty():
-            self.file_path_q.put('')
+            self.file_path_q.put(self.file_path)
 
     def draw(self):
         '''Handles capture and processing of the images from the camera'''
 
         start_time = time.time()  # Para medir el tiempo de fps
+
 
         self.recon_parameters = [self.arr_c,
                         self.arr_r,
@@ -1071,7 +1072,7 @@ class App(ctk.CTk):
         self.fps_label.configure(text=f'FPS: {self.fps}')
 
         # Repite la función después de 30 ms
-        self.after(30, self.draw)
+        self.after(15, self.draw)
 
     def check_current_FC(self):
         self.FC = filtcosenoF(self.cosine_period, np.array((self.width, self.height)))
@@ -1103,6 +1104,7 @@ def capture(image:Queue,
             path:Queue,
             width:Queue,
             height:Queue,
+            settings:Queue,
             ):
     # Initialize camera (0 by default most of the time means the integrated camera)
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
@@ -1143,13 +1145,20 @@ def capture(image:Queue,
                 img= cv2.cvtColor(cap.read()[1], cv2.COLOR_BGR2GRAY)
                 img = cv2.flip(img, 1)  # Voltea horizontalmente
 
-
+        if not settings.empty():
+            if settings.get():
+                open_camera_settings(cap)
         
         if image.empty():
             image.put(img)
             width.put(width_)
             height.put(height_)
 
+def open_camera_settings(cap):
+    try:
+        cap.set(cv2.CAP_PROP_SETTINGS, 0)
+    except:
+        print('Cannot access camera settings.')
 
 def reconstruct(image:Queue,
                 output:Queue,
