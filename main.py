@@ -99,7 +99,9 @@ class App(ctk.CTk):
         self.img_c._size = (self.width*self.scale, self.height*self.scale)
         self.img_r._size = (self.width*self.scale, self.height*self.scale)
 
-        self.fps = 0
+        self.w_fps = 0
+        self.c_fps = 0
+        self.r_fps = 0
 
         self.settings = False
 
@@ -160,8 +162,20 @@ class App(ctk.CTk):
                     self.phase_q)
         
         for queue, parameter in zip(self.capture_queues, self.capture_parameters):
+            if queue==self.captured_q:
+                queue.put((self.arr_c, self.c_fps))
+                continue
+
             queue.put(parameter)
+
         for queue, parameter in zip(self.recon_queues, self.recon_parameters):
+            if queue==self.captured_q:
+                queue.put((self.arr_c, self.r_fps))
+                continue
+            if queue==self.recon_q:
+                queue.put((self.arr_r, self.r_fps))
+                continue
+
             queue.put(parameter)
 
         self.capture = Process(target=capture, args=self.capture_queues)
@@ -253,11 +267,17 @@ class App(ctk.CTk):
         self.captured_label = ctk.CTkLabel(self.image_frame, image=self.img_c, text='')
         self.captured_label.grid(row=1, column=0, padx=20, pady=20, sticky='nsew')
 
+        # For displaying frames per second (actual real life time, not tick time)
+        self.c_fps_label = ctk.CTkLabel(self.image_frame, text=f'FPS: {self.c_fps}')
+        self.c_fps_label.grid(row=2, column=0, padx=20, pady=20)
+
         self.processed_title_label = ctk.CTkLabel(self.image_frame, text='Processed Image', **text_config)
         self.processed_title_label.grid(row=0, column=1, padx=20, pady=20, sticky='nsew')
         self.processed_label = ctk.CTkLabel(self.image_frame, image=self.img_r, text='')
         self.processed_label.grid(row=1, column=1, padx=20, pady=20, sticky='nsew')
-        #####
+        # For displaying frames per second (actual real life time, not tick time)
+        self.r_fps_label = ctk.CTkLabel(self.image_frame, text=f'FPS: {self.r_fps}')
+        self.r_fps_label.grid(row=2, column=1, padx=20, pady=20)
         
         # Buttons for saving and changing image scale
 
@@ -281,8 +301,8 @@ class App(ctk.CTk):
         self.camera_settings_button.grid(row=0, column=4, padx=20, pady=20)
 
         # For displaying frames per second (actual real life time, not tick time)
-        self.fps_label = ctk.CTkLabel(self.saving_frame, text=f'FPS: {self.fps}')
-        self.fps_label.grid(row=0, column=5, padx=20, pady=20)
+        self.w_fps_label = ctk.CTkLabel(self.saving_frame, text=f'FPS: {self.w_fps}')
+        self.w_fps_label.grid(row=0, column=5, padx=20, pady=20)
 
     def init_parameters_frame(self):
         # Menu with the parameter options 
@@ -712,8 +732,6 @@ class App(ctk.CTk):
             self.adjust_highpass(self.lowpass_slider.get())
             print(self.lowpass_slider.get())
 
-            
-
     def adjust_gamma(self, val):
         if (self.filter_image_var.get()=='CA'):
             if self.manual_gamma_c_var.get():
@@ -973,7 +991,7 @@ class App(ctk.CTk):
     def draw(self):
         '''Handles capture and processing of the images from the camera'''
 
-        start_time = time.time()  # Para medir el tiempo de fps
+        w_start_time = time.time()  # Para medir el tiempo de fps
 
 
         self.recon_parameters = [self.arr_c,
@@ -990,19 +1008,23 @@ class App(ctk.CTk):
                         self.phase_r.get()]
 
         for queue, parameter in zip(self.recon_queues, self.recon_parameters):
-            if queue.empty() and queue!=self.captured_q:
+            if queue==self.captured_q:
+                continue
+            if queue==self.recon_q:
+                continue
+            if queue.empty():
                 queue.put(parameter)
         
         if self.file_path_q.empty():
             self.file_path_q.put(self.file_path)
 
         if not self.captured_q.empty():
-            self.arr_c = self.captured_q.get()
+            capture = self.captured_q.get()
+            self.arr_c = capture[0]
+            self.c_fps = capture[1]
         
         if not (self.width_q.empty() or self.height_q.empty()):
             self.width, self.height = self.width_q.get(), self.height_q.get()
-
-
 
         arr_c = self.arr_c
 
@@ -1034,7 +1056,10 @@ class App(ctk.CTk):
 
         if not self.recon_q.empty():
             # Procesar y normalizar antes de mostrar
-            self.arr_r = self.recon_q.get() # Asumiendo que tienes esta función
+            reconstruction = self.recon_q.get()
+            self.arr_r = reconstruction[0]
+            self.r_fps = reconstruction[1]
+        
             self.arr_r = np.uint8(normalize(self.arr_r, 255))  # Normaliza la imagen
 
 
@@ -1065,11 +1090,13 @@ class App(ctk.CTk):
         self.processed_label.img = self.img_r
         self.processed_label.configure(image=self.img_r)
 
-        end_time = time.time()  # Solo estas líneas cuentan para el fps
+        w_end_time = time.time()  # Solo estas líneas cuentan para el fps
 
-        elapsed_time = end_time - start_time
-        self.fps = round(1 / elapsed_time, 1)
-        self.fps_label.configure(text=f'FPS: {self.fps}')
+        w_elapsed_time = w_end_time - w_start_time
+        self.w_fps = round(1 / w_elapsed_time, 1)
+        self.w_fps_label.configure(text=f'FPS: {self.w_fps}')
+        self.c_fps_label.configure(text=f'FPS: {self.c_fps}')
+        self.r_fps_label.configure(text=f'FPS: {self.r_fps}')
 
         self.after(15, self.draw)
 
@@ -1105,6 +1132,7 @@ def capture(image:Queue,
             height:Queue,
             settings:Queue,
             ):
+    
     # Initialize camera (0 by default most of the time means the integrated camera)
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
@@ -1125,6 +1153,7 @@ def capture(image:Queue,
     print(f'Height: {height_}')
         
     while True:
+        init_time = time.time()
         # Captura la imagen de la cámara
         img= cv2.cvtColor(cap.read()[1], cv2.COLOR_BGR2GRAY)
         img = cv2.flip(img, 1)  # Voltea horizontalmente
@@ -1142,11 +1171,16 @@ def capture(image:Queue,
             if settings.get():
                 open_camera_settings(cap)
         
+        end_time = time.time()
+
+        elapsed_time = end_time-init_time
+        fps = round(1 / elapsed_time, 1)
+
         if image.empty():
-            image.put(img)
+            image.put((img, fps))
             width.put(width_)
             height.put(height_)
-
+        
 def open_camera_settings(cap):
     try:
         cap.set(cv2.CAP_PROP_SETTINGS, 0)
@@ -1178,8 +1212,10 @@ def reconstruct(image:Queue,
                 FC.empty() or
                 squared.empty() or 
                 phase.empty()):
+            
+            init_time = time.time()
 
-            field = np.sqrt(normalize(image.get(), 1))
+            field = np.sqrt(normalize(image.get()[0], 1))
 
             alg = algorithm.get()
             dxy_ = dxy.get()
@@ -1200,14 +1236,19 @@ def reconstruct(image:Queue,
             sq = squared.get()
             ph = phase.get()
 
-            if output.empty():
+            if sq:
+                    arr = normalize(np.abs(recon)**2,1)
+            elif not sq and ph:
+                arr = normalize(np.angle(recon),1)
+            else:
+                arr = normalize(np.abs(recon),1)
 
-                if sq:
-                    output.put(normalize(np.abs(recon)**2, 1))
-                elif not sq and ph:
-                    output.put(normalize(np.angle(recon), 1))
-                else:
-                    output.put(normalize(np.abs(recon), 1))   
+            end_time = time.time()
+            elapsed_time = end_time-init_time
+            fps = round(1 / elapsed_time, 1)
+
+            if output.empty():
+                output.put((arr, fps))   
 
 
 
