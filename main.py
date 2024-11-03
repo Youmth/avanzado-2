@@ -22,30 +22,12 @@ class App(ctk.CTk):
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
-        # Initialize camera (0 by default most of the time means the integrated camera)
-        self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-
-        # Verify that the camera opened correctly
-        if not self.cap.isOpened():
-            print("No se puede abrir la cámara")
-            exit()
-
-        # Sets the camera resolution to the closest chose in settings
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, MAX_WIDTH)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, MAX_HEIGHT)
-
-        # Gets the actual resolution of the image
-        self.width  = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        self.height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-
-        self.aspect_ratio = self.width/self.height
+        self.width = MAX_WIDTH
+        self.height = MAX_HEIGHT
 
         # Scale for visualization, doesn't change the original resolution, just the size
         # on screen
         self.scale = (MAX_IMG_SCALE - MIN_IMG_SCALE)/2
-
-        print(f'Width: {self.width}')
-        print(f'Height: {self.height}')
 
         # Limits for the reconstruction parameters
         self.MIN_L = INIT_MIN_L
@@ -108,16 +90,21 @@ class App(ctk.CTk):
         # Arrays and images for the captured and reconstructed matrices
         self.arr_c = np.zeros((int(self.width), int(self.height)))
         self.arr_r = np.zeros((int(self.width), int(self.height)))
-        self.im_c = self.arr2im(self.arr_c)
-        self.im_r = self.arr2im(self.arr_r)
-        self.img_c = self.create_image(self.im_c)
-        self.img_r = self.create_image(self.im_r)
+        self.im_c = arr2im(self.arr_c)
+        self.im_r = arr2im(self.arr_r)
+        self.img_c = create_image(self.im_c, self.width, self.height)
+        self.img_r = create_image(self.im_r, self.width, self.height)
 
         # This is the visualization size, not the actual size of the processed image
         self.img_c._size = (self.width*self.scale, self.height*self.scale)
         self.img_r._size = (self.width*self.scale, self.height*self.scale)
 
         self.fps = 0
+
+        self.capture_parameters = [self.arr_c, 
+                                    self.file_path,
+                                    self.width,
+                                    self.height]
 
         self.recon_parameters = [self.arr_c,
                                  self.arr_r,
@@ -144,8 +131,16 @@ class App(ctk.CTk):
         self.FC_q = Queue()
         self.squared_q = Queue()
         self.phase_q = Queue()
+        self.file_path_q = Queue()
+        self.width_q = Queue()
+        self.height_q = Queue()
 
-        self.queues =   (self.captured_q,
+        self.capture_queues = (self.captured_q,
+                               self.file_path_q,
+                               self.width_q,
+                               self.height_q)
+
+        self.recon_queues =   (self.captured_q,
                     self.recon_q,
                     self.algorithm_q,
                     self.L_q,
@@ -158,10 +153,14 @@ class App(ctk.CTk):
                     self.squared_q,
                     self.phase_q)
         
-        for queue, parameter in zip(self.queues, self.recon_parameters):
+        for queue, parameter in zip(self.capture_queues, self.capture_parameters):
+            queue.put(parameter)
+        for queue, parameter in zip(self.recon_queues, self.recon_parameters):
             queue.put(parameter)
 
-        self.reconstruction = Process(target=reconstruct, args=self.queues)
+        self.capture = Process(target=capture, args=self.capture_queues)
+        self.capture.start()
+        self.reconstruction = Process(target=reconstruct, args=self.recon_queues)
         self.reconstruction.start()
 
         # Initialize all the elements of the gui at the same time, only once
@@ -625,7 +624,7 @@ class App(ctk.CTk):
         i = 0
         while os.path.exists("saves/capture/capture%s.bmp" % i):
             i += 1
-        im_c = self.arr2im(self.arr_c)
+        im_c = arr2im(self.arr_c)
         im_c.save('saves/capture/capture%s.bmp' % i)
 
     def no_filter_save_r(self):
@@ -634,7 +633,7 @@ class App(ctk.CTk):
         while os.path.exists("saves/reconstruction/reconstruction%s.bmp" % i):
             i += 1
 
-        im_r = self.arr2im(self.arr_r)
+        im_r = arr2im(self.arr_r)
         im_r.save('saves/reconstruction/reconstruction%s.bmp' % i)
 
     def set_variables(self):
@@ -957,18 +956,6 @@ class App(ctk.CTk):
 
         self.im_r.save('saves/reconstruction/reconstruction%s.bmp' % i)
 
-    def im2arr(self, path: str):
-        '''Converts file image into numpy array.'''
-        return np.asarray(Image.open(path).convert('L'))
-
-    def arr2im(self, array: np.ndarray):
-        '''Converts numpy array into PhotoImage type'''
-        return Image.fromarray(array.astype(np.uint8), 'L')
-    
-    def create_image(self, img: Image.Image):
-        '''Converts image into type usable by customtkinter'''
-        return ctk.CTkImage(light_image=img, dark_image=img, size=(self.width, self.height))
-
     def change_appearance_mode_event(self, new_appearance_mode):
         '''Changes between light and dark mode.'''
         ctk.set_appearance_mode(new_appearance_mode)
@@ -976,35 +963,17 @@ class App(ctk.CTk):
     def selectfile(self):
         self.file_path = ctk.filedialog.askopenfilename(title="Selecciona un archivo de imagen")
         if self.file_path:
-            image = self.im2arr(self.file_path)  # Asumiendo que tienes una función 'read'
-            if image is not None:
-                self.arr_c = image
+            if self.file_path_q.empty():
+                self.file_path_q.put(self.file_path)
 
     def return_to_stream(self):
-        self.file_path = ''
+        if self.file_path_q.empty():
+            self.file_path_q.put('')
 
     def draw(self):
         '''Handles capture and processing of the images from the camera'''
 
         start_time = time.time()  # Para medir el tiempo de fps
-
-        # Si hay una imagen cargada desde un archivo
-        if self.file_path:
-            arr_c = self.arr_c  # Utiliza la imagen cargada
-
-            # Gets the actual resolution of the image
-            self.height, self.width = arr_c.shape
-
-            self.aspect_ratio = self.width/self.height
-
-
-        else:
-            # Lee la imagen desde la cámara
-            self.arr_c= cv2.cvtColor(self.cap.read()[1], cv2.COLOR_BGR2GRAY)
-            self.arr_c = cv2.flip(self.arr_c, 1)  # Voltea horizontalmente
-
-            arr_c = self.arr_c
-
 
         self.recon_parameters = [self.arr_c,
                         self.arr_r,
@@ -1019,9 +988,22 @@ class App(ctk.CTk):
                         self.square_field.get(),
                         self.phase_r.get()]
 
-        for queue, parameter in zip(self.queues, self.recon_parameters):
+        for queue, parameter in zip(self.recon_queues, self.recon_parameters):
             if queue.empty():
                 queue.put(parameter)
+        
+        if self.file_path_q.empty():
+            self.file_path_q.put(self.file_path)
+
+        if not self.captured_q.empty():
+            self.arr_c = self.captured_q.get()
+        
+        if not (self.width_q.empty() or self.height_q.empty()):
+            self.width, self.height = self.width_q.get(), self.height_q.get()
+
+
+
+        arr_c = self.arr_c
 
         # Aplicar procesamiento a la imagen
         if self.manual_contrast_c_var.get():
@@ -1043,8 +1025,8 @@ class App(ctk.CTk):
             arr_c = np.uint8(arr_c*255)
 
 
-        self.im_c = self.arr2im(arr_c)  # Convierte el array a imagen
-        self.img_c = self.create_image(self.im_c)
+        self.im_c = arr2im(arr_c)  # Convierte el array a imagen
+        self.img_c = create_image(self.im_c, self.width, self.height)
         self.img_c._size = (self.width * self.scale, self.height * self.scale)
         self.captured_label.img = self.img_c
         self.captured_label.configure(image=self.img_c)
@@ -1076,8 +1058,8 @@ class App(ctk.CTk):
             arr_r = np.uint8(arr_r*255)
 
 
-        self.im_r = self.arr2im(arr_r)  # Convierte el array a imagen
-        self.img_r = self.create_image(self.im_r)
+        self.im_r = arr2im(arr_r)  # Convierte el array a imagen
+        self.img_r = create_image(self.im_r, self.width, self.height)
         self.img_r._size = (self.width * self.scale, self.height * self.scale)
         self.processed_label.img = self.img_r
         self.processed_label.configure(image=self.img_r)
@@ -1103,8 +1085,71 @@ class App(ctk.CTk):
         self.cosine_period = DEFAULT_COSINE_PERIOD
 
     def release(self):
-        self.reconstruction.terminate()
-        self.cap.release()
+        os.system("taskkill /f /im python.exe")
+
+def im2arr(path: str):
+    '''Converts file image into numpy array.'''
+    return np.asarray(Image.open(path).convert('L'))
+
+def arr2im(array: np.ndarray):
+    '''Converts numpy array into PhotoImage type'''
+    return Image.fromarray(array.astype(np.uint8), 'L')
+
+def create_image(img: Image.Image, width, height):
+    '''Converts image into type usable by customtkinter'''
+    return ctk.CTkImage(light_image=img, dark_image=img, size=(width, height))
+
+def capture(image:Queue,
+            path:Queue,
+            width:Queue,
+            height:Queue,
+            ):
+    # Initialize camera (0 by default most of the time means the integrated camera)
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+
+    # Verify that the camera opened correctly
+    if not cap.isOpened():
+        print("No se puede abrir la cámara")
+        exit()
+
+    # Sets the camera resolution to the closest chose in settings
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, MAX_WIDTH)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, MAX_HEIGHT)
+
+    # Gets the actual resolution of the image
+    width_  = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+    height_ = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
+    print(f'Width: {width_}')
+    print(f'Height: {height_}')
+        
+    while True:
+        # Captura la imagen de la cámara
+        ret, frame = cap.read()
+        if not ret:
+            continue
+
+        if not path.empty():
+            path_ = path.get()
+
+            if path_:
+                img = im2arr(path_)
+
+                # Gets the actual resolution of the image
+                height_, width_ = img.shape
+
+            else:
+                # Lee la imagen desde la cámara
+                img= cv2.cvtColor(cap.read()[1], cv2.COLOR_BGR2GRAY)
+                img = cv2.flip(img, 1)  # Voltea horizontalmente
+
+
+        
+        if image.empty():
+            image.put(img)
+            width.put(width_)
+            height.put(height_)
+
 
 def reconstruct(image:Queue,
                 output:Queue,
