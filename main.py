@@ -4,7 +4,6 @@ import time
 import os
 from multiprocessing import Process, Queue
 from kreuzer_functions import filtcosenoF
-from skimage import exposure, filters
 
 from settings import *
 from _3DHR_Utilities import *
@@ -74,6 +73,9 @@ class App(ctk.CTk):
         self.manual_lowpass_c_var = ctk.BooleanVar(self, value=False)
         self.manual_lowpass_r_var = ctk.BooleanVar(self, value=False)
 
+        self.filters_c = []
+        self.filters_r = []
+
         self.gamma_c = 0
         self.gamma_r = 0
         self.contrast_c = 0
@@ -88,6 +90,9 @@ class App(ctk.CTk):
         # Arrays and images for the captured and reconstructed matrices
         self.arr_c = np.zeros((int(self.width), int(self.height)))
         self.arr_r = np.zeros((int(self.width), int(self.height)))
+
+        self.arr_c_f = np.zeros((int(self.width), int(self.height)))
+
         self.im_c = arr2im(self.arr_c)
         self.im_r = arr2im(self.arr_r)
         self.img_c = create_image(self.im_c, self.width, self.height)
@@ -104,6 +109,8 @@ class App(ctk.CTk):
         self.settings = False
 
         self.capture_parameters = [self.arr_c, 
+                                   self.arr_c_f,
+                                   self.filters_c,
                                     self.file_path,
                                     self.width,
                                     self.height,
@@ -111,6 +118,7 @@ class App(ctk.CTk):
 
         self.recon_parameters = [self.arr_c,
                                  self.arr_r,
+                                 self.filters_r,
                                  self.algorithm_var.get(),
                                  self.L,
                                  self.Z,
@@ -123,7 +131,10 @@ class App(ctk.CTk):
                                  self.phase_r.get()]
 
         self.captured_q = Queue()
+        self.filtered_q = Queue()
         self.recon_q = Queue()
+        self.filters_c_q = Queue()
+        self.filters_r_q = Queue()
         self.algorithm_q = Queue()
         self.L_q = Queue()
         self.Z_q = Queue()
@@ -141,6 +152,8 @@ class App(ctk.CTk):
         self.settings_q = Queue()
 
         self.capture_queues = (self.captured_q,
+                               self.filtered_q,
+                               self.filters_c_q,
                                self.file_path_q,
                                self.width_q,
                                self.height_q,
@@ -148,6 +161,7 @@ class App(ctk.CTk):
 
         self.recon_queues =   (self.captured_q,
                     self.recon_q,
+                    self.filters_r_q,
                     self.algorithm_q,
                     self.L_q,
                     self.Z_q,
@@ -163,6 +177,10 @@ class App(ctk.CTk):
             if queue==self.captured_q:
                 queue.put((self.arr_c, self.c_fps))
                 continue
+            if queue==self.filtered_q:
+                continue
+            if queue==self.filters_c_q:
+                continue
 
             queue.put(parameter)
 
@@ -172,6 +190,8 @@ class App(ctk.CTk):
                 continue
             if queue==self.recon_q:
                 queue.put((self.arr_r, self.r_fps))
+                continue
+            if queue==self.filters_r_q:
                 continue
 
             queue.put(parameter)
@@ -994,6 +1014,7 @@ class App(ctk.CTk):
 
         self.recon_parameters = [self.arr_c,
                         self.arr_r,
+                        self.filters_r,
                         self.algorithm_var.get(),
                         self.L,
                         self.Z,
@@ -1010,47 +1031,85 @@ class App(ctk.CTk):
                 continue
             if queue==self.recon_q:
                 continue
+            if queue==self.filters_r_q:
+                continue
             if queue.empty():
                 queue.put(parameter)
+
+        self.filters_c = []
+        filter_params_c = []
+
+        if self.manual_contrast_c_var.get():
+            self.filters_c.append(contrast_filter)
+            filter_params_c.append(self.contrast_c)
+
+        if self.manual_gamma_c_var.get():
+            self.filters_c.append(gamma_filter)
+            filter_params_c.append(self.gamma_c)
+
+        if self.manual_adaptative_eq_c_var.get():
+            self.filters_c.append(adaptative_eq_filter)
+            filter_params_c.append([])
+
+        if self.manual_highpass_c_var.get():
+            self.filters_c.append(highpass_filter)
+            filter_params_c.append(self.highpass_c)
+
+        if self.manual_lowpass_c_var.get():
+            self.filters_c.append(lowpass_filter)
+            filter_params_c.append(self.lowpass_c)
         
         if self.file_path_q.empty():
             self.file_path_q.put(self.file_path)
+
+        if self.filters_c_q.empty():
+            self.filters_c_q.put((self.filters_c, filter_params_c))
 
         if not self.captured_q.empty():
             capture = self.captured_q.get()
             self.arr_c = capture[0]
             self.c_fps = capture[1]
         
+        if not self.filtered_q.empty():
+            self.arr_c_f = self.filtered_q.get()
+        
         if not (self.width_q.empty() or self.height_q.empty()):
             self.width, self.height = self.width_q.get(), self.height_q.get()
 
-        arr_c = self.arr_c
-
-        # Aplicar procesamiento a la imagen
-        if self.manual_contrast_c_var.get():
-            arr_c = np.clip(arr_c * self.contrast_c, 0, 255)
-
-        if self.manual_gamma_c_var.get():
-            arr_c = np.clip(arr_c + self.gamma_c * 255, 0, 255)
-
-        if self.manual_adaptative_eq_c_var.get():
-            arr_c = exposure.equalize_adapthist(normalize(arr_c, 1), clip_limit=DEFAULT_CLIP_LIMIT)
-            arr_c = np.uint8(arr_c * 255)  # Convertir de 0-1 a 0-255
-
-        if self.manual_highpass_c_var.get():
-            arr_c = filters.butterworth(normalize(arr_c, 1), self.highpass_c, high_pass=True)
-            arr_c = np.uint8(arr_c*255)
-
-        if self.manual_lowpass_c_var.get():
-            arr_c = filters.butterworth(normalize(arr_c, 1), self.lowpass_c, high_pass=False)
-            arr_c = np.uint8(arr_c*255)
-
-
-        self.im_c = arr2im(arr_c)  # Convierte el array a imagen
+        self.im_c = arr2im(self.arr_c_f)  # Convierte el array a imagen
         self.img_c = create_image(self.im_c, self.width, self.height)
         self.img_c._size = (self.width * self.scale, self.height * self.scale)
         self.captured_label.img = self.img_c
         self.captured_label.configure(image=self.img_c)
+
+        self.filters_r = []
+        filter_params_r = []
+
+        if self.manual_contrast_r_var.get():
+            self.filters_r.append(contrast_filter)
+            filter_params_r.append(self.contrast_r)
+
+        if self.manual_gamma_r_var.get():
+            self.filters_r.append(gamma_filter)
+            filter_params_r.append(self.gamma_r)
+
+        if self.manual_adaptative_eq_r_var.get():
+            self.filters_r.append(adaptative_eq_filter)
+            filter_params_r.append([])
+
+        if self.manual_highpass_r_var.get():
+            self.filters_r.append(highpass_filter)
+            filter_params_r.append(self.highpass_r)
+
+        if self.manual_lowpass_r_var.get():
+            self.filters_r.append(lowpass_filter)
+            filter_params_r.append(self.lowpass_r)
+        
+        if self.file_path_q.empty():
+            self.file_path_q.put(self.file_path)
+
+        if self.filters_r_q.empty():
+            self.filters_r_q.put((self.filters_r, filter_params_r))
 
         if not self.recon_q.empty():
             # Procesar y normalizar antes de mostrar
@@ -1060,29 +1119,7 @@ class App(ctk.CTk):
         
             self.arr_r = np.uint8(normalize(self.arr_r, 255))  # Normaliza la imagen
 
-
-        arr_r = self.arr_r
-
-        if self.manual_contrast_r_var.get():
-            arr_r = np.clip(arr_r * self.contrast_r, 0, 255)
-
-        if self.manual_gamma_r_var.get():
-            arr_r = np.clip(arr_r + self.gamma_r * 255, 0, 255)
-
-        if self.manual_adaptative_eq_r_var.get():
-            arr_r = exposure.equalize_adapthist(normalize(arr_r, 1), clip_limit=DEFAULT_CLIP_LIMIT)
-            arr_r = np.uint8(arr_r * 255)  # Convertir de 0-1 a 0-255
-
-        if self.manual_highpass_r_var.get():
-            arr_r = filters.butterworth(normalize(arr_r, 1), self.highpass_r, high_pass=True)
-            arr_r = np.uint8(arr_r*255)
-
-        if self.manual_lowpass_r_var.get():
-            arr_r = filters.butterworth(normalize(arr_r, 1), self.lowpass_r, high_pass=False)
-            arr_r = np.uint8(arr_r*255)
-
-
-        self.im_r = arr2im(arr_r)  # Convierte el array a imagen
+        self.im_r = arr2im(self.arr_r)  # Convierte el array a imagen
         self.img_r = create_image(self.im_r, self.width, self.height)
         self.img_r._size = (self.width * self.scale, self.height * self.scale)
         self.processed_label.img = self.img_r
@@ -1110,6 +1147,7 @@ class App(ctk.CTk):
         self.cosine_period = DEFAULT_COSINE_PERIOD
 
     def release(self):
+        # Safer
         os.system("taskkill /f /im python.exe")
 
 if __name__=='__main__':

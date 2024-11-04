@@ -3,6 +3,7 @@ import time
 from customtkinter import CTkImage
 from multiprocessing import Queue
 from kreuzer_functions import kreuzer3F
+from skimage import exposure, filters
 
 from settings import *
 from _3DHR_Utilities import *
@@ -21,7 +22,27 @@ def create_image(img: Image.Image, width, height):
     '''Converts image into type usable by customtkinter'''
     return CTkImage(light_image=img, dark_image=img, size=(width, height))
 
+def gamma_filter(arr, gamma):
+    return np.clip(arr + gamma * 255, 0, 255)
+
+def contrast_filter(arr, contrast):
+    return np.clip(arr * contrast, 0, 255)
+
+def adaptative_eq_filter(arr, _):
+    arr = exposure.equalize_adapthist(normalize(arr, 1), clip_limit=DEFAULT_CLIP_LIMIT)
+    return np.uint8(arr * 255)  # Convertir de 0-1 a 0-255
+
+def highpass_filter(arr, freq):
+    arr = filters.butterworth(normalize(arr, 1), freq, high_pass=True)
+    return np.uint8(arr*255)
+
+def lowpass_filter(arr, freq):
+    arr = filters.butterworth(normalize(arr, 1), freq, high_pass=False)
+    return np.uint8(arr*255)
+
 def capture(image:Queue,
+            filtered:Queue,
+            filters:Queue,
             path:Queue,
             width:Queue,
             height:Queue,
@@ -53,11 +74,14 @@ def capture(image:Queue,
         img= cv2.cvtColor(cap.read()[1], cv2.COLOR_BGR2GRAY)
         img = cv2.flip(img, 1)  # Voltea horizontalmente
 
+        filt_img = img
+
         if not path.empty():
             path_ = path.get()
 
             if path_:
                 img = im2arr(path_)
+                filt_img = img
 
                 # Gets the actual resolution of the image
                 height_, width_ = img.shape
@@ -65,16 +89,30 @@ def capture(image:Queue,
         if not settings.empty():
             if settings.get():
                 open_camera_settings(cap)
+
+        if not filters.empty():
+
+            filters_ = filters.get()
+            filter_functions = filters_[0]
+            filter_params = filters_[1]
+
+            for filter, param, in zip(filter_functions, filter_params):
+                filt_img = filter(filt_img, param)
         
         end_time = time.time()
 
         elapsed_time = end_time-init_time
         fps = round(1 / elapsed_time, 1)
 
+        if filtered.empty():
+            filtered.put(filt_img)
+
         if image.empty():
             image.put((img, fps))
             width.put(width_)
             height.put(height_)
+        
+
         
 def open_camera_settings(cap):
     try:
@@ -84,6 +122,7 @@ def open_camera_settings(cap):
 
 def reconstruct(image:Queue,
                 output:Queue,
+                filters:Queue,
                 algorithm:Queue,
                 L:Queue,
                 Z:Queue,
@@ -132,11 +171,22 @@ def reconstruct(image:Queue,
             ph = phase.get()
 
             if sq:
-                    arr = normalize(np.abs(recon)**2,1)
+                    arr = normalize(np.abs(recon)**2,255)
             elif not sq and ph:
-                arr = normalize(np.angle(recon),1)
+                arr = normalize(np.angle(recon),255)
             else:
-                arr = normalize(np.abs(recon),1)
+                arr = normalize(np.abs(recon),255)
+
+            if not filters.empty():
+                print('Filters not empty')
+
+                filters_ = filters.get()
+                print(filters_)
+                filter_functions = filters_[0]
+                filter_params = filters_[1]
+
+                for filter, param, in zip(filter_functions, filter_params):
+                    arr = filter(arr, param)
 
             end_time = time.time()
             elapsed_time = end_time-init_time
