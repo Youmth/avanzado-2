@@ -1040,23 +1040,23 @@ class App(ctk.CTk):
         filter_params_c = []
 
         if self.manual_contrast_c_var.get():
-            self.filters_c.append(contrast_filter)
+            self.filters_c.append('contrast')
             filter_params_c.append(self.contrast_c)
 
         if self.manual_gamma_c_var.get():
-            self.filters_c.append(gamma_filter)
+            self.filters_c.append('gamma')
             filter_params_c.append(self.gamma_c)
 
         if self.manual_adaptative_eq_c_var.get():
-            self.filters_c.append(adaptative_eq_filter)
+            self.filters_c.append('adaptative_eq')
             filter_params_c.append([])
 
         if self.manual_highpass_c_var.get():
-            self.filters_c.append(highpass_filter)
+            self.filters_c.append('highpass')
             filter_params_c.append(self.highpass_c)
 
         if self.manual_lowpass_c_var.get():
-            self.filters_c.append(lowpass_filter)
+            self.filters_c.append('lowpass')
             filter_params_c.append(self.lowpass_c)
         
         if self.file_path_q.empty():

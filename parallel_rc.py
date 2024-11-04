@@ -23,10 +23,10 @@ def create_image(img: Image.Image, width, height):
     return CTkImage(light_image=img, dark_image=img, size=(width, height))
 
 def gamma_filter(arr, gamma):
-    return np.clip(arr + gamma * 255, 0, 255)
+    return np.uint8(np.clip(arr + gamma * 255, 0, 255))
 
 def contrast_filter(arr, contrast):
-    return np.clip(arr * contrast, 0, 255)
+    return np.uint8(np.clip(arr * contrast, 0, 255))
 
 def adaptative_eq_filter(arr, _):
     arr = exposure.equalize_adapthist(normalize(arr, 1), clip_limit=DEFAULT_CLIP_LIMIT)
@@ -67,6 +67,12 @@ def capture(image:Queue,
 
     print(f'Width: {width_}')
     print(f'Height: {height_}')
+
+    filter_dict = {'gamma':gamma_filter,
+                        'contrast':contrast_filter,
+                        'adaptative_eq':adaptative_eq_filter,
+                        'highpass':highpass_filter,
+                        'lowpass':lowpass_filter}
         
     while True:
         init_time = time.time()
@@ -91,13 +97,12 @@ def capture(image:Queue,
                 open_camera_settings(cap)
 
         if not filters.empty():
-
             filters_ = filters.get()
             filter_functions = filters_[0]
             filter_params = filters_[1]
 
             for filter, param, in zip(filter_functions, filter_params):
-                filt_img = filter(filt_img, param)
+                filt_img = filter_dict[filter](filt_img, param)
         
         end_time = time.time()
 
@@ -171,17 +176,14 @@ def reconstruct(image:Queue,
             ph = phase.get()
 
             if sq:
-                    arr = normalize(np.abs(recon)**2,255)
+                arr = normalize(np.abs(recon)**2,255)
             elif not sq and ph:
                 arr = normalize(np.angle(recon),255)
             else:
                 arr = normalize(np.abs(recon),255)
 
             if not filters.empty():
-                print('Filters not empty')
-
                 filters_ = filters.get()
-                print(filters_)
                 filter_functions = filters_[0]
                 filter_params = filters_[1]
 
