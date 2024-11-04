@@ -56,7 +56,52 @@ class Menu:
         self.highlim = DEFAULT_MAXIMUM
 
         self.modules = {'routing':[],
-                        'tuning':[]}
+                        'tuning':[],
+                        'checklist':[]}
+
+    def add_checklist(self,
+                         title_:str,
+                         row:int,
+                         col:int,
+                         labels:tuple,
+                         variables:tuple,
+                         width:float=DEFAULT_CHECKLIST_WIDTH,
+                         height:float=DEFAULT_CHECKLIST_HEIGHT,
+                         padx:tuple|float=DEFAULT_CHECKLIST_PADX,
+                         pady:tuple|float=DEFAULT_CHECKLIST_PADY,
+                         corner:float=8,
+                         spadx:tuple|float=DEFAULT_CHECKLIST_SPADX,
+                         spady:tuple|float=DEFAULT_CHECKLIST_SPADY):
+        
+        frame = ctk.CTkFrame(self.frame, width, height, corner)
+        frame.grid(row=row, column=col, padx=padx, pady=pady, sticky='ew')
+        frame.columnconfigure(0, weight=1)
+        for i in range(1, len(variables)):
+            frame.columnconfigure(i, weight=0)
+        frame.columnconfigure(len(variables), weight=1)
+
+        frame.grid_propagate(False)
+
+        title = ctk.CTkLabel(frame, width, corner_radius=corner, text=title_)
+        title.grid(row=0, column=0, columnspan=len(variables)+1, sticky='ew', padx=spadx, pady=spady)
+
+        rcol = 1
+        checkboxes = [] 
+
+        for label, var in zip(labels, variables):
+            print(rcol)
+            cb = ctk.CTkCheckBox(frame, corner_radius=corner, text=label, variable=var)
+            cb.grid(row=1, column=rcol, padx=spadx, pady=spady, sticky='ew')
+            checkboxes.append(cb)
+            rcol+=1
+
+        widgets = {'frame':frame, 
+                   'title':title, 
+                   'checkbox':checkboxes
+                }
+
+        return widgets
+
 
 
     def add_tuning(self, 
@@ -127,7 +172,7 @@ class Menu:
         '''Updates all slider values, magnification and scale factor'''
         widgets['title'].configure(text=f'{label}   {round(value, decimals)}')
         widgets['slider'].set(round(value, decimals))
-        widgets['entry'].configure(placeholder_text=f'{round(value, decimals)}')
+        widgets['entry'][0].configure(placeholder_text=f'{round(value, decimals)}')
 
     def set_tuning_limits(self,
                           min_val:str,
@@ -142,8 +187,7 @@ class Menu:
         except:
             max_ = 0
             
-        slider.configure(from_=min_, to=max_)
-            
+        slider.configure(from_=min_, to=max_)   
 
     def add_routing(self,
                     menu:object,

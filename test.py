@@ -43,9 +43,18 @@ def set_value_L():
 
     update_L(val)
 
+fix_r = ctk.BooleanVar(value=False)
+intensity = ctk.BooleanVar(value=False)
+phase = ctk.BooleanVar(value=False)
+
+checks = {'Fix r':fix_r,
+          'Show intensity':intensity,
+          'Show phase':phase}
+
 goParam = main.add_routing(param, 1, 0, 'Go to Parameters Menu')
 goHome = param.add_routing(main, 2, 0, 'Go to Main Menu')
 
 tuning_w = param.add_tuning('Distancia L: ', 1, 0, update=update_L, set_value=set_value_L)
+checklist_w = param.add_checklist('Opciones Adicionales', 2, 0, list(checks.keys()), list(checks.values()))
 
 window.mainloop()
