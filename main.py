@@ -1056,7 +1056,7 @@ class App(ctk.CTk):
             filter_params_c.append(self.highpass_c)
 
         if self.manual_lowpass_c_var.get():
-            self.filters_c.append('lowpass')
+            self.filters_c.append('lowpass  ')
             filter_params_c.append(self.lowpass_c)
         
         if self.file_path_q.empty():
