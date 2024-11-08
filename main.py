@@ -1073,8 +1073,11 @@ class App(ctk.CTk):
         if not self.filtered_q.empty():
             self.arr_c_f = self.filtered_q.get()
         
-        if not (self.width_q.empty() or self.height_q.empty()):
-            self.width, self.height = self.width_q.get(), self.height_q.get()
+        if not self.width_q.empty():
+            self.width = self.width_q.get()
+                
+        if not self.height_q.empty():
+            self.height = self.height_q.get()
 
         self.im_c = arr2im(self.arr_c_f)  # Convierte el array a imagen
         self.img_c = create_image(self.im_c, self.width, self.height)

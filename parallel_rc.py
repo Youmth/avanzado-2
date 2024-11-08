@@ -82,6 +82,8 @@ def capture(image:Queue,
 
         filt_img = img
 
+        height_, width_ = img.shape
+
         if not path.empty():
             path_ = path.get()
 
