@@ -1056,7 +1056,7 @@ class App(ctk.CTk):
             filter_params_c.append(self.highpass_c)
 
         if self.manual_lowpass_c_var.get():
-            self.filters_c.append('lowpass  ')
+            self.filters_c.append('lowpass')
             filter_params_c.append(self.lowpass_c)
         
         if self.file_path_q.empty():
@@ -1133,7 +1133,7 @@ class App(ctk.CTk):
         self.c_fps_label.configure(text=f'FPS: {self.c_fps}')
         self.r_fps_label.configure(text=f'FPS: {self.r_fps}')
 
-        self.after(15, self.draw)
+        self.after(30, self.draw)
 
     def check_current_FC(self):
         self.FC = filtcosenoF(self.cosine_period, np.array((self.width, self.height)))
