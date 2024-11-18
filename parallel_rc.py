@@ -2,7 +2,7 @@ import numpy as np
 import time
 from customtkinter import CTkImage
 from multiprocessing import Queue
-from kreuzer_functions import kreuzer3F
+from kreuzer_functions import kreuzer3F, filtcosenoF
 from skimage import exposure, filters
 
 from settings import *
@@ -160,7 +160,6 @@ def reconstruct(queue_manager:dict[dict[Queue, Queue], dict[Queue, Queue], dict[
                   'wavelength':None,
                   'dxy':None,
                   'scale_factor':None,
-                  'FC':None,
                   'squared':None,
                   'phase':None
                   }
@@ -182,6 +181,8 @@ def reconstruct(queue_manager:dict[dict[Queue, Queue], dict[Queue, Queue], dict[
 
             field = np.sqrt(normalize(input_dict['image'], 1))
 
+            FC = filtcosenoF(DEFAULT_COSINE_PERIOD, np.array(field.shape))
+
             if input_dict['algorithm'] == 'AS':
                 recon = propagate(field, 
                                   input_dict['r'], 
@@ -196,7 +197,7 @@ def reconstruct(queue_manager:dict[dict[Queue, Queue], dict[Queue, Queue], dict[
                 dxy = input_dict['dxy']
 
                 deltaX = Z*dxy/L
-                recon = kreuzer3F(field, Z, L, input_dict['wavelength'], dxy, deltaX, input_dict['FC'])
+                recon = kreuzer3F(field, Z, L, input_dict['wavelength'], dxy, deltaX, FC)
 
             sq = input_dict['squared']
             ph = input_dict['phase']

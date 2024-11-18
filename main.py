@@ -3,7 +3,6 @@ import customtkinter as ctk
 import time
 import os
 from multiprocessing import Process, Queue
-from kreuzer_functions import filtcosenoF
 
 from settings import *
 from _3DHR_Utilities import *
@@ -142,7 +141,6 @@ class App(ctk.CTk):
                             'wavelength':self.wavelength,
                             'dxy':self.dxy,
                             'scale_factor':self.scale_factor,
-                            'FC':self.FC,
                             'squared':self.square_field.get(),
                             'phase':self.phase_r.get()
                             }
@@ -1071,7 +1069,6 @@ class App(ctk.CTk):
         self.recon_input['wavelength'] = self.wavelength
         self.recon_input['dxy'] = self.dxy
         self.recon_input['scale_factor'] = self.scale_factor
-        self.recon_input['FC'] = self.FC
         self.recon_input['squared'] = self.square_field.get()
         self.recon_input['phase'] = self.phase_r.get()
 
