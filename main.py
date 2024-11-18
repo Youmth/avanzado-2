@@ -116,12 +116,8 @@ class App(ctk.CTk):
             },
             "reconstruction": {
                 "input": Queue(1), 
-                "output": Queue(),
+                "output": Queue(1),
             },
-            "interface": {
-                "input": Queue(), 
-                "output": Queue(),
-            }
         }
         
         self.capture_input = {'path':self.file_path,
