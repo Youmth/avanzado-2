@@ -44,8 +44,6 @@ class App(ctk.CTk):
         # FC parameter setting
         self.cosine_period = DEFAULT_COSINE_PERIOD
 
-        self.FC = filtcosenoF(self.cosine_period, np.array((self.width, self.height)))
-
         # Vars for choosing parameters in the parameters menu
         self.fix_r = ctk.BooleanVar(self, value=False)
         self.square_field = ctk.BooleanVar(self, value=False)
@@ -94,13 +92,10 @@ class App(ctk.CTk):
         self.arr_c = np.zeros((int(self.width), int(self.height)))
         self.arr_r = np.zeros((int(self.width), int(self.height)))
 
-        self.arr_c_f = np.zeros((int(self.width), int(self.height)))
-        self.arr_r_f = np.zeros((int(self.width), int(self.height)))
-
-        self.im_c = arr2im(self.arr_c)
-        self.im_r = arr2im(self.arr_r)
-        self.img_c = create_image(self.im_c, self.width, self.height)
-        self.img_r = create_image(self.im_r, self.width, self.height)
+        im_c = arr2im(self.arr_c)
+        im_r = arr2im(self.arr_r)
+        self.img_c = create_image(im_c, self.width, self.height)
+        self.img_r = create_image(im_r, self.width, self.height)
 
         # This is the visualization size, not the actual size of the processed image
         self.img_c._size = (self.width*self.scale, self.height*self.scale)
@@ -109,6 +104,8 @@ class App(ctk.CTk):
         self.w_fps = 0
         self.c_fps = 0
         self.r_fps = 0
+
+        self.max_w_fps = 0
 
         self.settings = False
 
@@ -123,34 +120,17 @@ class App(ctk.CTk):
             },
         }
         
-        self.capture_input = {'path':None, 'reference path':None, 'settings':None, 'filters':None, 'filter':None}
+        self.capture_input = {'path': None, 'reference path': None, 'settings': None, 'filters': None, 'filter': None}
+
+        self.capture_output = {'image': None, 'filtered': None, 'fps': 0, 'size': (0, 0)}
+
+        self.recon_input = {'image': None, 'filters': None, 'filter': False, 'algorithm': None, 'L': 0, 'Z': 0, 'r': 0, 
+                            'wavelength': 0, 'dxy': 0, 'scale_factor': 0, 'squared': False, 'phase': False}
         
-        self.capture_output = {'image':self.arr_c,
-                               'filtered':self.arr_c_f,
-                               'fps':self.c_fps,
-                               'size':(self.width, self.height)}
-        
-        self.recon_input = {'image':self.arr_c,
-                            'filters':self.filters_r,
-                            'filter':True,
-                            'algorithm':self.algorithm_var.get(),
-                            'L':self.L,
-                            'Z':self.Z,
-                            'r':self.r,
-                            'wavelength':self.wavelength,
-                            'dxy':self.dxy,
-                            'scale_factor':self.scale_factor,
-                            'squared':self.square_field.get(),
-                            'phase':self.phase_r.get()
-                            }
-                    
-        self.recon_output = {'image':self.arr_r,
-                             'filtered':self.arr_r_f,
-                            'fps':self.r_fps
-                            }
+        self.recon_output = {'image': None, 'filtered': None, 'fps': 0}
+
         
         self.update_inputs()
-        self.update_outputs()
 
         self.capture = Process(target=capture, args=(self.queue_manager,))
         self.capture.start()
@@ -173,7 +153,7 @@ class App(ctk.CTk):
 
         if process=='reconstruction' or not process:
             self.recon_input['image'] = self.arr_c
-            self.recon_input['filters'] = (self.filters_r, self.filter_params_c)
+            self.recon_input['filters'] = (self.filters_r, self.filter_params_r)
             self.recon_input['filter'] = True
             self.recon_input['algorithm'] = self.algorithm_var.get()
             self.recon_input['L'] = self.L
@@ -188,13 +168,13 @@ class App(ctk.CTk):
     def update_outputs(self, process:str = ''):
         if process=='capture' or not process:
             self.arr_c = self.capture_output['image']
-            self.arr_c_f = self.capture_output['filtered']
+            self.img_c = self.capture_output['filtered']
             self.c_fps = self.capture_output['fps']
             self.width, self.height = self.capture_output['size']
 
         if process=='reconstruction' or not process:
             self.arr_r = self.recon_output['image'] 
-            self.arr_r_f = self.recon_output['filtered'] 
+            self.img_r = self.recon_output['filtered'] 
             self.r_fps = self.recon_output['fps'] 
 
     def init_viewing_frame(self):
@@ -1056,13 +1036,11 @@ class App(ctk.CTk):
             for key in self.capture_output.keys():
                 self.capture_output[key] = output[key]
 
-        self.update_outputs('capture')
+            self.update_outputs('capture')
 
-        self.im_c = arr2im(self.arr_c_f)  # Convierte el array a imagen
-        self.img_c = create_image(self.im_c, self.width, self.height)
-        self.img_c._size = (self.width * self.scale, self.height * self.scale)
-        self.captured_label.img = self.img_c
-        self.captured_label.configure(image=self.img_c)
+            self.img_c._size = (self.width * self.scale, self.height * self.scale)
+            self.captured_label.img = self.img_c
+            self.captured_label.configure(image=self.img_c)
 
         self.filters_r = []
         self.filter_params_r = []
@@ -1099,25 +1077,27 @@ class App(ctk.CTk):
             for key in self.recon_output.keys():
                 self.recon_output[key] = output[key]
 
-        self.update_outputs('reconstruction')
-        
-        self.arr_r_f = np.uint8(normalize(self.arr_r_f, 255))
-
-        self.im_r = arr2im(self.arr_r_f)  # Convierte el array a imagen
-        self.img_r = create_image(self.im_r, self.width, self.height)
-        self.img_r._size = (self.width * self.scale, self.height * self.scale)
-        self.processed_label.img = self.img_r
-        self.processed_label.configure(image=self.img_r)
+            self.update_outputs('reconstruction')
+            
+            self.img_r._size = (self.width * self.scale, self.height * self.scale)
+            self.processed_label.img = self.img_r
+            self.processed_label.configure(image=self.img_r)
 
         w_end_time = time.time()  # Solo estas líneas cuentan para el fps
 
         w_elapsed_time = w_end_time - w_start_time
-        self.w_fps = round(1 / w_elapsed_time, 1)
+
+        fps = round(1/w_elapsed_time, 1) if w_elapsed_time!=0 else 0
+
+        if fps>self.max_w_fps:
+            self.max_w_fps = fps if fps<144 else 144
+
+        self.w_fps = fps if w_elapsed_time!=0 else self.max_w_fps
         self.w_fps_label.configure(text=f'FPS: {self.w_fps}')
         self.c_fps_label.configure(text=f'FPS: {self.c_fps}')
         self.r_fps_label.configure(text=f'FPS: {self.r_fps}')
 
-        self.after(30, self.draw)
+        self.after(15, self.draw)
 
     def check_current_FC(self):
         self.FC = filtcosenoF(self.cosine_period, np.array((self.width, self.height)))

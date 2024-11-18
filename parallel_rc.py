@@ -121,10 +121,14 @@ def capture(queue_manager:dict[dict[Queue, Queue], dict[Queue, Queue], dict[Queu
                 for filter, param, in zip(filter_functions, filter_params):
                     filt_img = filter_dict[filter](filt_img, param)
         
+        filt_img = arr2im(filt_img.astype(np.uint8))
+        filt_img = create_image(filt_img, width_, height_)
+
+
         end_time = time.time()
 
         elapsed_time = end_time-init_time
-        fps = round(1 / elapsed_time, 1)
+        fps = round(1 / elapsed_time, 1) if elapsed_time!=0 else 0
 
         if not queue_manager['capture']['output'].full():
             
@@ -139,7 +143,6 @@ def capture(queue_manager:dict[dict[Queue, Queue], dict[Queue, Queue], dict[Queu
 def open_camera_settings(cap):
     try:
         cap.set(cv2.CAP_PROP_SETTINGS, 0)
-        print('Settings opened')
     except:
         print('Cannot access camera settings.')
 
@@ -181,7 +184,7 @@ def reconstruct(queue_manager:dict[dict[Queue, Queue], dict[Queue, Queue], dict[
 
             field = np.sqrt(normalize(input_dict['image'], 1))
 
-            FC = filtcosenoF(DEFAULT_COSINE_PERIOD, np.array(field.shape))
+            FC = filtcosenoF(DEFAULT_COSINE_PERIOD, np.array((field.shape[1], field.shape[0])))
 
             if input_dict['algorithm'] == 'AS':
                 recon = propagate(field, 
@@ -218,15 +221,20 @@ def reconstruct(queue_manager:dict[dict[Queue, Queue], dict[Queue, Queue], dict[
                 if input_dict['filter']:
                     for filter, param, in zip(filter_functions, filter_params):
                         filt_img = filter_dict[filter](filt_img, param)
+                    print('filters applied')
+                    print(filter_functions)
+
+            filt_img = arr2im(filt_img.astype(np.uint8))
+            filt_img = create_image(filt_img, field.shape[1], field.shape[0])
 
             end_time = time.time()
             elapsed_time = end_time-init_time
-            fps = round(1 / elapsed_time, 1)
+            fps = round(1 / elapsed_time, 1) if elapsed_time!=0 else 0
 
             if not queue_manager['reconstruction']['output'].full():
                 
-                output_dict['image']= arr.astype(np.uint8)
-                output_dict['filtered']=filt_img.astype(np.uint8)
+                output_dict['image']= arr
+                output_dict['filtered']=filt_img
                 output_dict['fps'] = fps
 
                 queue_manager['reconstruction']['output'].put(output_dict)
