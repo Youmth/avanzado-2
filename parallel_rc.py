@@ -49,6 +49,7 @@ def capture(queue_manager:dict[dict[Queue, Queue], dict[Queue, Queue], dict[Queu
                     'lowpass':lowpass_filter}
     
     input_dict = {'path':None,
+                  'reference path':None,
                   'settings':None,
                   'filters':None,
                   'filter':None}
@@ -99,6 +100,15 @@ def capture(queue_manager:dict[dict[Queue, Queue], dict[Queue, Queue], dict[Queu
 
             # Gets the actual resolution of the image
             height_, width_ = img.shape
+
+        if input_dict['reference path']:
+            ref = im2arr(input_dict['reference path'])
+            if img.shape == ref.shape:
+                img = img-ref
+            else:
+                print('Image sizes do not match')
+            
+            filt_img = img
 
         if input_dict['settings']:
             open_camera_settings(cap)

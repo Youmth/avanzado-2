@@ -3,6 +3,8 @@ from numpy.fft import fftshift, fft2, ifftshift, ifft2
 from scipy.ndimage import map_coordinates
 import matplotlib.pyplot as plt
 
+from _3DHR_Utilities import propagate
+
 
 
 def ang_spectrum(field, z, wavelength, dx, dy):
@@ -198,9 +200,9 @@ def kreuzer3F(hologram, z, L, wavelength, dx, deltaX, FC):
     if T1.shape != FC.shape:
         T1 = np.pad(T1, ((pad, pad), (pad, pad)), mode='constant')
 
-    K = ang_spectrum(T1, -(L-z), wavelength, deltaX, deltaY)
-    #K = K[pad:pad + n_rows, pad:pad + n_rows]
-    #K = np.abs(K) ** 2
-    #K = normalize(K)
+    K = propagate(T1, (L-z), wavelength, deltaX, deltaY)
+    K = K[pad:pad + n_rows, pad:pad + n_rows]
+    K = np.abs(K) ** 2
+    K = normalize(K)
 
     return K

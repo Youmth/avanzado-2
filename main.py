@@ -55,6 +55,7 @@ class App(ctk.CTk):
         self.filter_image_var = ctk.StringVar(self, value='CA') # CA for captured by default
         
         self.file_path = ''
+        self.ref_path = ''
 
         self.gamma_checkbox_var = ctk.BooleanVar(self, value=False)
         self.contrast_checkbox_var = ctk.BooleanVar(self, value=False)
@@ -121,6 +122,7 @@ class App(ctk.CTk):
         }
         
         self.capture_input = {'path':self.file_path,
+                              'reference path':self.ref_path,
                               'settings':self.settings,
                               'filters':self.filters_c,
                               'filter':None}
@@ -264,17 +266,23 @@ class App(ctk.CTk):
         self.size_slider.set(self.scale)
 
         self.save_captured_button = ctk.CTkButton(self.saving_frame, text='Save Capture', command=self.save_capture)
-        self.save_captured_button.grid(row=0, column=2, padx=20, pady=20)
+        self.save_captured_button.grid(row=0, column=2, padx=5, pady=20)
 
         self.save_processed_button = ctk.CTkButton(self.saving_frame, text='Save Reconstruction', command=self.save_processed)
-        self.save_processed_button.grid(row=0, column=3, padx=20, pady=20)
+        self.save_processed_button.grid(row=0, column=3, padx=5, pady=20)
         
         self.camera_settings_button = ctk.CTkButton(self.saving_frame, text='Open Camera Settings', command=self.open_settings)
-        self.camera_settings_button.grid(row=0, column=4, padx=20, pady=20)
+        self.camera_settings_button.grid(row=0, column=4, padx=5, pady=20)
+
+        self.select_reference_button = ctk.CTkButton(self.saving_frame, text='Select reference', command=self.selectref)
+        self.select_reference_button.grid(row=0, column=5, padx=5, pady=20)
+
+        self.reset_reference_button = ctk.CTkButton(self.saving_frame, text='Reset reference', command=self.resetref)
+        self.reset_reference_button.grid(row=0, column=6, padx=5, pady=20)
 
         # For displaying frames per second (actual real life time, not tick time)
         self.w_fps_label = ctk.CTkLabel(self.saving_frame, text=f'FPS: {self.w_fps}')
-        self.w_fps_label.grid(row=0, column=5, padx=20, pady=20)
+        self.w_fps_label.grid(row=0, column=7, padx=10, pady=20)
 
     def init_parameters_frame(self):
         # Menu with the parameter options 
@@ -634,6 +642,15 @@ class App(ctk.CTk):
         im_r = arr2im(self.arr_r)
         im_r.save('saves/reconstruction/reconstruction%s.bmp' % i)
 
+    def save_reference(self):
+        '''Saves a reference with an increasing number'''
+        i = 0
+        while os.path.exists("references/reference%s.bmp" % i):
+            i += 1
+
+        im_r = arr2im(self.arr_r)
+        im_r.save('references/reference%s.bmp' % i)
+
     def open_settings(self):
         self.settings = True
         self.after(1000, self.close_settings)
@@ -957,6 +974,12 @@ class App(ctk.CTk):
     def selectfile(self):
         self.file_path = ctk.filedialog.askopenfilename(title="Selecciona un archivo de imagen")
 
+    def selectref(self):
+        self.ref_path = ctk.filedialog.askopenfilename(title='Selecciona un archivo de imagen')
+
+    def resetref(self):
+        self.ref_path = ''
+
     def return_to_stream(self):
         self.file_path = ''
 
@@ -989,6 +1012,7 @@ class App(ctk.CTk):
             filter_params_c.append(self.lowpass_c)
         
         self.capture_input['path'] = self.file_path
+        self.capture_input['reference path'] = self.ref_path
         self.capture_input['settings'] = self.settings
         self.capture_input['filters'] = (self.filters_c, filter_params_c)
         self.capture_input['filter'] = True
