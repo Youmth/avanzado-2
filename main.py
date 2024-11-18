@@ -227,7 +227,7 @@ class App(ctk.CTk):
         self.filters_button.grid(row=2, column=0, **mb_grid_config)
 
         self.it_button = ctk.CTkButton(self.navigation_frame, text='Image Tools', **mb_config)
-        self.it_button.grid(row=3, column=0, **mb_grid_config)
+        #self.it_button.grid(row=3, column=0, **mb_grid_config)
 
         self.so_button = ctk.CTkButton(self.navigation_frame, text='Saving Options', **mb_config, command=lambda: self.change_menu_to('so'))
         self.so_button.grid(row=4, column=0, **mb_grid_config)

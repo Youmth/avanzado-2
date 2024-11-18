@@ -221,8 +221,7 @@ def reconstruct(queue_manager:dict[dict[Queue, Queue], dict[Queue, Queue], dict[
                 if input_dict['filter']:
                     for filter, param, in zip(filter_functions, filter_params):
                         filt_img = filter_dict[filter](filt_img, param)
-                    print('filters applied')
-                    print(filter_functions)
+
 
             filt_img = arr2im(filt_img.astype(np.uint8))
             filt_img = create_image(filt_img, field.shape[1], field.shape[0])
