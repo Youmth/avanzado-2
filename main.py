@@ -76,6 +76,9 @@ class App(ctk.CTk):
         self.filters_c = []
         self.filters_r = []
 
+        self.filter_params_c = []
+        self.filter_params_r = []
+
         self.gamma_c = 0
         self.gamma_r = 0
         self.contrast_c = 0
@@ -120,11 +123,7 @@ class App(ctk.CTk):
             },
         }
         
-        self.capture_input = {'path':self.file_path,
-                              'reference path':self.ref_path,
-                              'settings':self.settings,
-                              'filters':self.filters_c,
-                              'filter':None}
+        self.capture_input = {'path':None, 'reference path':None, 'settings':None, 'filters':None, 'filter':None}
         
         self.capture_output = {'image':self.arr_c,
                                'filtered':self.arr_c_f,
@@ -133,7 +132,7 @@ class App(ctk.CTk):
         
         self.recon_input = {'image':self.arr_c,
                             'filters':self.filters_r,
-                            'filter':None,
+                            'filter':True,
                             'algorithm':self.algorithm_var.get(),
                             'L':self.L,
                             'Z':self.Z,
@@ -149,6 +148,9 @@ class App(ctk.CTk):
                              'filtered':self.arr_r_f,
                             'fps':self.r_fps
                             }
+        
+        self.update_inputs()
+        self.update_outputs()
 
         self.capture = Process(target=capture, args=(self.queue_manager,))
         self.capture.start()
@@ -160,6 +162,40 @@ class App(ctk.CTk):
         self.init_parameters_frame()
         self.init_filters_frame()
         self.init_saving_frame()
+
+    def update_inputs(self, process:str = ''):
+        if process=='capture' or not process:
+            self.capture_input['path'] = self.file_path
+            self.capture_input['reference path'] = self.ref_path
+            self.capture_input['settings'] = self.settings
+            self.capture_input['filters'] = (self.filters_c, self.filter_params_c)
+            self.capture_input['filter'] = True
+
+        if process=='reconstruction' or not process:
+            self.recon_input['image'] = self.arr_c
+            self.recon_input['filters'] = (self.filters_r, self.filter_params_c)
+            self.recon_input['filter'] = True
+            self.recon_input['algorithm'] = self.algorithm_var.get()
+            self.recon_input['L'] = self.L
+            self.recon_input['Z'] = self.Z
+            self.recon_input['r'] = self.r
+            self.recon_input['wavelength'] = self.wavelength
+            self.recon_input['dxy'] = self.dxy
+            self.recon_input['scale_factor'] = self.scale_factor
+            self.recon_input['squared'] = self.square_field.get()
+            self.recon_input['phase'] = self.phase_r.get()
+
+    def update_outputs(self, process:str = ''):
+        if process=='capture' or not process:
+            self.arr_c = self.capture_output['image']
+            self.arr_c_f = self.capture_output['filtered']
+            self.c_fps = self.capture_output['fps']
+            self.width, self.height = self.capture_output['size']
+
+        if process=='reconstruction' or not process:
+            self.arr_r = self.recon_output['image'] 
+            self.arr_r_f = self.recon_output['filtered'] 
+            self.r_fps = self.recon_output['fps'] 
 
     def init_viewing_frame(self):
         # Frame for navigation
@@ -987,33 +1023,29 @@ class App(ctk.CTk):
         w_start_time = time.time()  # Para medir fps
 
         self.filters_c = []
-        filter_params_c = []
+        self.filter_params_c = []
 
         if self.manual_contrast_c_var.get():
             self.filters_c.append('contrast')
-            filter_params_c.append(self.contrast_c)
+            self.filter_params_c.append(self.contrast_c)
 
         if self.manual_gamma_c_var.get():
             self.filters_c.append('gamma')
-            filter_params_c.append(self.gamma_c)
+            self.filter_params_c.append(self.gamma_c)
 
         if self.manual_adaptative_eq_c_var.get():
             self.filters_c.append('adaptative_eq')
-            filter_params_c.append([])
+            self.filter_params_c.append([])
 
         if self.manual_highpass_c_var.get():
             self.filters_c.append('highpass')
-            filter_params_c.append(self.highpass_c)
+            self.filter_params_c.append(self.highpass_c)
 
         if self.manual_lowpass_c_var.get():
             self.filters_c.append('lowpass')
-            filter_params_c.append(self.lowpass_c)
+            self.filter_params_c.append(self.lowpass_c)
         
-        self.capture_input['path'] = self.file_path
-        self.capture_input['reference path'] = self.ref_path
-        self.capture_input['settings'] = self.settings
-        self.capture_input['filters'] = (self.filters_c, filter_params_c)
-        self.capture_input['filter'] = True
+        self.update_inputs('capture')
 
         if not self.queue_manager['capture']['input'].full():  
             self.queue_manager['capture']['input'].put(self.capture_input)
@@ -1024,10 +1056,7 @@ class App(ctk.CTk):
             for key in self.capture_output.keys():
                 self.capture_output[key] = output[key]
 
-        self.arr_c = self.capture_output['image']
-        self.arr_c_f = self.capture_output['filtered']
-        self.c_fps = self.capture_output['fps']
-        self.width, self.height = self.capture_output['size']
+        self.update_outputs('capture')
 
         self.im_c = arr2im(self.arr_c_f)  # Convierte el array a imagen
         self.img_c = create_image(self.im_c, self.width, self.height)
@@ -1036,41 +1065,30 @@ class App(ctk.CTk):
         self.captured_label.configure(image=self.img_c)
 
         self.filters_r = []
-        filter_params_r = []
+        self.filter_params_r = []
 
         if self.manual_contrast_r_var.get():
             self.filters_r.append('contrast')
-            filter_params_r.append(self.contrast_r)
+            self.filter_params_r.append(self.contrast_r)
 
         if self.manual_gamma_r_var.get():
             self.filters_r.append('gamma')
-            filter_params_r.append(self.gamma_r)
+            self.filter_params_r.append(self.gamma_r)
 
         if self.manual_adaptative_eq_r_var.get():
             self.filters_r.append('adaptative_eq')
-            filter_params_r.append([])
+            self.filter_params_r.append([])
 
         if self.manual_highpass_r_var.get():
             self.filters_r.append('highpass')
-            filter_params_r.append(self.highpass_r)
+            self.filter_params_r.append(self.highpass_r)
 
         if self.manual_lowpass_r_var.get():
             self.filters_r.append('lowpass')
-            filter_params_r.append(self.lowpass_r)
+            self.filter_params_r.append(self.lowpass_r)
 
         
-        self.recon_input['image'] = self.arr_c
-        self.recon_input['filters'] = (self.filters_r, filter_params_r)
-        self.recon_input['filter'] = True
-        self.recon_input['algorithm'] = self.algorithm_var.get()
-        self.recon_input['L'] = self.L
-        self.recon_input['Z'] = self.Z
-        self.recon_input['r'] = self.r
-        self.recon_input['wavelength'] = self.wavelength
-        self.recon_input['dxy'] = self.dxy
-        self.recon_input['scale_factor'] = self.scale_factor
-        self.recon_input['squared'] = self.square_field.get()
-        self.recon_input['phase'] = self.phase_r.get()
+        self.update_inputs('reconstruction')
 
         if not self.queue_manager['reconstruction']['input'].full():
             self.queue_manager['reconstruction']['input'].put(self.recon_input)
@@ -1081,9 +1099,7 @@ class App(ctk.CTk):
             for key in self.recon_output.keys():
                 self.recon_output[key] = output[key]
 
-        self.arr_r = self.recon_output['image']
-        self.arr_r_f = self.recon_output['filtered']
-        self.r_fps = self.recon_output['fps']
+        self.update_outputs('reconstruction')
         
         self.arr_r_f = np.uint8(normalize(self.arr_r_f, 255))
 
