@@ -92,6 +92,7 @@ class App(ctk.CTk):
         self.arr_r = np.zeros((int(self.width), int(self.height)))
 
         self.arr_c_f = np.zeros((int(self.width), int(self.height)))
+        self.arr_r_f = np.zeros((int(self.width), int(self.height)))
 
         self.im_c = arr2im(self.arr_c)
         self.im_r = arr2im(self.arr_r)
@@ -108,97 +109,54 @@ class App(ctk.CTk):
 
         self.settings = False
 
-        self.capture_parameters = [self.arr_c, 
-                                   self.arr_c_f,
-                                   self.filters_c,
-                                    self.file_path,
-                                    self.width,
-                                    self.height,
-                                    self.settings]
-
-        self.recon_parameters = [self.arr_c,
-                                 self.arr_r,
-                                 self.filters_r,
-                                 self.algorithm_var.get(),
-                                 self.L,
-                                 self.Z,
-                                 self.r,
-                                 self.wavelength,
-                                 self.dxy,
-                                 self.scale_factor,
-                                 self.FC,
-                                 self.square_field.get(),
-                                 self.phase_r.get()]
-
-        self.captured_q = Queue()
-        self.filtered_q = Queue()
-        self.recon_q = Queue()
-        self.filters_c_q = Queue()
-        self.filters_r_q = Queue()
-        self.algorithm_q = Queue()
-        self.L_q = Queue()
-        self.Z_q = Queue()
-        self.r_q = Queue()
-        self.wavelength_q = Queue()
-        self.dxy_q = Queue()
-        self.scale_factor_q = Queue()
-        self.FC_q = Queue()
-        self.squared_q = Queue()
-        self.phase_q = Queue()
-        self.file_path_q = Queue()
-        self.width_q = Queue()
-        self.height_q = Queue()
-
-        self.settings_q = Queue()
-
-        self.capture_queues = (self.captured_q,
-                               self.filtered_q,
-                               self.filters_c_q,
-                               self.file_path_q,
-                               self.width_q,
-                               self.height_q,
-                               self.settings_q)
-
-        self.recon_queues =   (self.captured_q,
-                    self.recon_q,
-                    self.filters_r_q,
-                    self.algorithm_q,
-                    self.L_q,
-                    self.Z_q,
-                    self.r_q,
-                    self.wavelength_q,
-                    self.dxy_q,
-                    self.scale_factor_q,
-                    self.FC_q,
-                    self.squared_q,
-                    self.phase_q)
+        self.queue_manager = {
+            "capture": {
+                "input": Queue(1),
+                "output": Queue(1), 
+            },
+            "reconstruction": {
+                "input": Queue(1), 
+                "output": Queue(),
+            },
+            "interface": {
+                "input": Queue(), 
+                "output": Queue(),
+            }
+        }
         
-        for queue, parameter in zip(self.capture_queues, self.capture_parameters):
-            if queue==self.captured_q:
-                queue.put((self.arr_c, self.c_fps))
-                continue
-            if queue==self.filtered_q:
-                continue
-            if queue==self.filters_c_q:
-                continue
+        self.capture_input = {'path':self.file_path,
+                              'settings':self.settings,
+                              'filters':self.filters_c,
+                              'filter':None}
+        
+        self.capture_output = {'image':self.arr_c,
+                               'filtered':self.arr_c_f,
+                               'fps':self.c_fps,
+                               'size':(self.width, self.height)}
+        
+        self.recon_input = {'image':self.arr_c,
+                            'filters':self.filters_r,
+                            'filter':None,
+                            'algorithm':self.algorithm_var.get(),
+                            'L':self.L,
+                            'Z':self.Z,
+                            'r':self.r,
+                            'wavelength':self.wavelength,
+                            'dxy':self.dxy,
+                            'scale_factor':self.scale_factor,
+                            'FC':self.FC,
+                            'squared':self.square_field.get(),
+                            'phase':self.phase_r.get()
+                            }
+                    
+        self.recon_output = {'image':self.arr_r,
+                             'filtered':self.arr_r_f,
+                            'fps':self.r_fps
+                            }
 
-            queue.put(parameter)
-
-        for queue, parameter in zip(self.recon_queues, self.recon_parameters):
-            if queue==self.captured_q:
-                queue.put((self.arr_c, self.r_fps))
-                continue
-            if queue==self.recon_q:
-                queue.put((self.arr_r, self.r_fps))
-                continue
-            if queue==self.filters_r_q:
-                continue
-
-            queue.put(parameter)
-
-        self.capture = Process(target=capture, args=self.capture_queues)
+        self.capture = Process(target=capture, args=(self.queue_manager,))
         self.capture.start()
-        self.reconstruction = Process(target=reconstruct, args=self.recon_queues)
+        self.reconstruction = Process(target=reconstruct, args=(self.queue_manager,))
         self.reconstruction.start()
 
         # Initialize all the elements of the gui at the same time, only once
@@ -315,7 +273,7 @@ class App(ctk.CTk):
         self.save_processed_button = ctk.CTkButton(self.saving_frame, text='Save Reconstruction', command=self.save_processed)
         self.save_processed_button.grid(row=0, column=3, padx=20, pady=20)
         
-        self.camera_settings_button = ctk.CTkButton(self.saving_frame, text='Open Camera Settings', command=lambda:self.settings_q.put(True))
+        self.camera_settings_button = ctk.CTkButton(self.saving_frame, text='Open Camera Settings', command=self.open_settings)
         self.camera_settings_button.grid(row=0, column=4, padx=20, pady=20)
 
         # For displaying frames per second (actual real life time, not tick time)
@@ -680,6 +638,13 @@ class App(ctk.CTk):
         im_r = arr2im(self.arr_r)
         im_r.save('saves/reconstruction/reconstruction%s.bmp' % i)
 
+    def open_settings(self):
+        self.settings = True
+        self.after(1000, self.close_settings)
+    
+    def close_settings(self):
+        self.settings = False
+
     def set_variables(self):
         try:
             self.wavelength = float(self.lambda_entry.get())
@@ -744,11 +709,9 @@ class App(ctk.CTk):
 
         if self.manual_highpass_c_var.get() or self.manual_highpass_r_var.get():
             self.adjust_highpass(self.highpass_slider.get())
-            print(self.highpass_slider.get())
 
         if self.manual_lowpass_c_var.get() or self.manual_lowpass_r_var.get():
             self.adjust_highpass(self.lowpass_slider.get())
-            print(self.lowpass_slider.get())
 
     def adjust_gamma(self, val):
         if (self.filter_image_var.get()=='CA'):
@@ -809,7 +772,7 @@ class App(ctk.CTk):
         self.magnification_label.configure(text=f'Magnificación: {round(self.scale_factor, 4)}')
 
 
-        self.scale_factor = self.L/self.Z
+        self.scale_factor = self.L/self.Z if self.Z!=0 else self.L/MIN_DISTANCE
 
     def update_L(self, val):
         '''Updates the value of L based on the slider'''
@@ -997,44 +960,14 @@ class App(ctk.CTk):
 
     def selectfile(self):
         self.file_path = ctk.filedialog.askopenfilename(title="Selecciona un archivo de imagen")
-        if self.file_path:
-            if self.file_path_q.empty():
-                self.file_path_q.put(self.file_path)
 
     def return_to_stream(self):
         self.file_path = ''
-        if self.file_path_q.empty():
-            self.file_path_q.put(self.file_path)
 
     def draw(self):
         '''Handles capture and processing of the images from the camera'''
 
-        w_start_time = time.time()  # Para medir el tiempo de fps
-
-
-        self.recon_parameters = [self.arr_c,
-                        self.arr_r,
-                        self.filters_r,
-                        self.algorithm_var.get(),
-                        self.L,
-                        self.Z,
-                        self.r,
-                        self.wavelength,
-                        self.dxy,
-                        self.scale_factor,
-                        self.FC,
-                        self.square_field.get(),
-                        self.phase_r.get()]
-
-        for queue, parameter in zip(self.recon_queues, self.recon_parameters):
-            if queue==self.captured_q:
-                continue
-            if queue==self.recon_q:
-                continue
-            if queue==self.filters_r_q:
-                continue
-            if queue.empty():
-                queue.put(parameter)
+        w_start_time = time.time()  # Para medir fps
 
         self.filters_c = []
         filter_params_c = []
@@ -1059,25 +992,24 @@ class App(ctk.CTk):
             self.filters_c.append('lowpass')
             filter_params_c.append(self.lowpass_c)
         
-        if self.file_path_q.empty():
-            self.file_path_q.put(self.file_path)
+        self.capture_input['path'] = self.file_path
+        self.capture_input['settings'] = self.settings
+        self.capture_input['filters'] = (self.filters_c, filter_params_c)
+        self.capture_input['filter'] = True
 
-        if self.filters_c_q.empty():
-            self.filters_c_q.put((self.filters_c, filter_params_c))
+        if not self.queue_manager['capture']['input'].full():  
+            self.queue_manager['capture']['input'].put(self.capture_input)
 
-        if not self.captured_q.empty():
-            capture = self.captured_q.get()
-            self.arr_c = capture[0]
-            self.c_fps = capture[1]
-        
-        if not self.filtered_q.empty():
-            self.arr_c_f = self.filtered_q.get()
-        
-        if not self.width_q.empty():
-            self.width = self.width_q.get()
-                
-        if not self.height_q.empty():
-            self.height = self.height_q.get()
+        if not self.queue_manager['capture']['output'].empty():
+            output = self.queue_manager['capture']['output'].get()
+
+            for key in self.capture_output.keys():
+                self.capture_output[key] = output[key]
+
+        self.arr_c = self.capture_output['image']
+        self.arr_c_f = self.capture_output['filtered']
+        self.c_fps = self.capture_output['fps']
+        self.width, self.height = self.capture_output['size']
 
         self.im_c = arr2im(self.arr_c_f)  # Convierte el array a imagen
         self.img_c = create_image(self.im_c, self.width, self.height)
@@ -1089,40 +1021,56 @@ class App(ctk.CTk):
         filter_params_r = []
 
         if self.manual_contrast_r_var.get():
-            self.filters_r.append(contrast_filter)
+            self.filters_r.append('contrast')
             filter_params_r.append(self.contrast_r)
 
         if self.manual_gamma_r_var.get():
-            self.filters_r.append(gamma_filter)
+            self.filters_r.append('gamma')
             filter_params_r.append(self.gamma_r)
 
         if self.manual_adaptative_eq_r_var.get():
-            self.filters_r.append(adaptative_eq_filter)
+            self.filters_r.append('adaptative_eq')
             filter_params_r.append([])
 
         if self.manual_highpass_r_var.get():
-            self.filters_r.append(highpass_filter)
+            self.filters_r.append('highpass')
             filter_params_r.append(self.highpass_r)
 
         if self.manual_lowpass_r_var.get():
-            self.filters_r.append(lowpass_filter)
+            self.filters_r.append('lowpass')
             filter_params_r.append(self.lowpass_r)
+
         
-        if self.file_path_q.empty():
-            self.file_path_q.put(self.file_path)
+        self.recon_input['image'] = self.arr_c
+        self.recon_input['filters'] = (self.filters_r, filter_params_r)
+        self.recon_input['filter'] = True
+        self.recon_input['algorithm'] = self.algorithm_var.get()
+        self.recon_input['L'] = self.L
+        self.recon_input['Z'] = self.Z
+        self.recon_input['r'] = self.r
+        self.recon_input['wavelength'] = self.wavelength
+        self.recon_input['dxy'] = self.dxy
+        self.recon_input['scale_factor'] = self.scale_factor
+        self.recon_input['FC'] = self.FC
+        self.recon_input['squared'] = self.square_field.get()
+        self.recon_input['phase'] = self.phase_r.get()
 
-        if self.filters_r_q.empty():
-            self.filters_r_q.put((self.filters_r, filter_params_r))
+        if not self.queue_manager['reconstruction']['input'].full():
+            self.queue_manager['reconstruction']['input'].put(self.recon_input)
 
-        if not self.recon_q.empty():
-            # Procesar y normalizar antes de mostrar
-            reconstruction = self.recon_q.get()
-            self.arr_r = reconstruction[0]
-            self.r_fps = reconstruction[1]
+        if not self.queue_manager['reconstruction']['output'].empty():
+            output = self.queue_manager['reconstruction']['output'].get()
+
+            for key in self.recon_output.keys():
+                self.recon_output[key] = output[key]
+
+        self.arr_r = self.recon_output['image']
+        self.arr_r_f = self.recon_output['filtered']
+        self.r_fps = self.recon_output['fps']
         
-            self.arr_r = np.uint8(normalize(self.arr_r, 255))  # Normaliza la imagen
+        self.arr_r_f = np.uint8(normalize(self.arr_r_f, 255))
 
-        self.im_r = arr2im(self.arr_r)  # Convierte el array a imagen
+        self.im_r = arr2im(self.arr_r_f)  # Convierte el array a imagen
         self.img_r = create_image(self.im_r, self.width, self.height)
         self.img_r._size = (self.width * self.scale, self.height * self.scale)
         self.processed_label.img = self.img_r

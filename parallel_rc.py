@@ -40,15 +40,24 @@ def lowpass_filter(arr, freq):
     arr = filters.butterworth(normalize(arr, 1), freq, high_pass=False)
     return np.uint8(arr*255)
 
-def capture(image:Queue,
-            filtered:Queue,
-            filters:Queue,
-            path:Queue,
-            width:Queue,
-            height:Queue,
-            settings:Queue,
-            ):
+def capture(queue_manager:dict[dict[Queue, Queue], dict[Queue, Queue], dict[Queue, Queue]]):
     
+    filter_dict =  {'gamma':gamma_filter,
+                    'contrast':contrast_filter,
+                    'adaptative_eq':adaptative_eq_filter,
+                    'highpass':highpass_filter,
+                    'lowpass':lowpass_filter}
+    
+    input_dict = {'path':None,
+                  'settings':None,
+                  'filters':None,
+                  'filter':None}
+    
+    output_dict = {'image':None,
+                   'filtered':None,
+                   'fps':None,
+                   'size':None}
+
     # Initialize camera (0 by default most of the time means the integrated camera)
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
@@ -68,114 +77,119 @@ def capture(image:Queue,
     print(f'Width: {width_}')
     print(f'Height: {height_}')
 
-    filter_dict = {'gamma':gamma_filter,
-                        'contrast':contrast_filter,
-                        'adaptative_eq':adaptative_eq_filter,
-                        'highpass':highpass_filter,
-                        'lowpass':lowpass_filter}
-        
     while True:
         init_time = time.time()
         # Captura la imagen de la cámara
-        img= cv2.cvtColor(cap.read()[1], cv2.COLOR_BGR2GRAY)
+        img = cv2.cvtColor(cap.read()[1], cv2.COLOR_BGR2GRAY)
         img = cv2.flip(img, 1)  # Voltea horizontalmente
 
         filt_img = img
 
         height_, width_ = img.shape
 
-        if not path.empty():
-            path_ = path.get()
+        if not queue_manager['capture']['input'].empty():
+            input = queue_manager['capture']['input'].get()
 
-            if path_:
-                img = im2arr(path_)
-                filt_img = img
+            for key in input_dict.keys():
+                input_dict[key] = input[key]
 
-                # Gets the actual resolution of the image
-                height_, width_ = img.shape
+        if input_dict['path']:
+            img = im2arr(input_dict['path'])
+            filt_img = img
 
-        if not settings.empty():
-            if settings.get():
-                open_camera_settings(cap)
+            # Gets the actual resolution of the image
+            height_, width_ = img.shape
 
-        if not filters.empty():
-            filters_ = filters.get()
-            filter_functions = filters_[0]
-            filter_params = filters_[1]
+        if input_dict['settings']:
+            open_camera_settings(cap)
+        
+        if input_dict['filters']:
+            filter_functions = input_dict['filters'][0]
+            filter_params = input_dict['filters'][1]
 
-            for filter, param, in zip(filter_functions, filter_params):
-                filt_img = filter_dict[filter](filt_img, param)
+            if input_dict['filter']:
+                for filter, param, in zip(filter_functions, filter_params):
+                    filt_img = filter_dict[filter](filt_img, param)
         
         end_time = time.time()
 
         elapsed_time = end_time-init_time
         fps = round(1 / elapsed_time, 1)
 
-        if filtered.empty():
-            filtered.put(filt_img)
+        if not queue_manager['capture']['output'].full():
+            
+            output_dict['image']= img
+            output_dict['filtered'] = filt_img
+            output_dict['fps'] = fps
+            output_dict['size'] = (width_, height_)
 
-        if image.empty():
-            image.put((img, fps))
-            width.put(width_)
-            height.put(height_)
-        
+            queue_manager['capture']['output'].put(output_dict)
 
         
 def open_camera_settings(cap):
     try:
         cap.set(cv2.CAP_PROP_SETTINGS, 0)
+        print('Settings opened')
     except:
         print('Cannot access camera settings.')
 
-def reconstruct(image:Queue,
-                output:Queue,
-                filters:Queue,
-                algorithm:Queue,
-                L:Queue,
-                Z:Queue,
-                r:Queue,
-                wavelength:Queue,
-                dxy:Queue, 
-                scale_factor:Queue,
-                FC:Queue,
-                squared:Queue,
-                phase:Queue
-                ):
+def reconstruct(queue_manager:dict[dict[Queue, Queue], dict[Queue, Queue], dict[Queue, Queue]]):
+    filter_dict =  {'gamma':gamma_filter,
+                    'contrast':contrast_filter,
+                    'adaptative_eq':adaptative_eq_filter,
+                    'highpass':highpass_filter,
+                    'lowpass':lowpass_filter}
+
+    input_dict = {'image':None,
+                  'filters':None,
+                  'filter':None,
+                  'algorithm':None,
+                  'L':None,
+                  'Z':None,
+                  'r':None,
+                  'wavelength':None,
+                  'dxy':None,
+                  'scale_factor':None,
+                  'FC':None,
+                  'squared':None,
+                  'phase':None
+                  }
+    
+    output_dict = {'image':None,
+                   'filtered':None,
+                   'fps':None
+                   }
     while True:
-        if not (image.empty() or
-                algorithm.empty() or
-                L.empty() or
-                Z.empty() or
-                r.empty() or
-                wavelength.empty() or
-                dxy.empty() or
-                scale_factor.empty() or
-                FC.empty() or
-                squared.empty() or 
-                phase.empty()):
+        if not queue_manager['reconstruction']['input'].empty():
+            # We want this processing to ocurr only if there is an image to process
             
             init_time = time.time()
 
-            field = np.sqrt(normalize(image.get()[0], 1))
+            input = queue_manager['reconstruction']['input'].get()
 
-            alg = algorithm.get()
-            dxy_ = dxy.get()
-            L_ = L.get()
-            Z_ = Z.get()
-            r_ = r.get()
-            wavelength_ = wavelength.get()
-            scale_factor_ = scale_factor.get()
-            FC_ = FC.get()
+            for key in input_dict.keys():
+                input_dict[key] = input[key]
 
+            field = np.sqrt(normalize(input_dict['image'], 1))
 
-            if alg == 'AS':
-                recon = propagate(field, r_, wavelength_, dxy_, dxy_, scale_factor_)
-            elif alg == 'KR':
-                deltaX = Z_*dxy_/L_
-                recon = kreuzer3F(field, Z_, L_, wavelength_, dxy_, deltaX, FC_)
+            if input_dict['algorithm'] == 'AS':
+                recon = propagate(field, 
+                                  input_dict['r'], 
+                                  input_dict['wavelength'], 
+                                  input_dict['dxy'], 
+                                  input_dict['dxy'], 
+                                  input_dict['scale_factor'])
+            elif input_dict['algorithm'] == 'KR':
 
-            sq = squared.get()
-            ph = phase.get()
+                Z = input_dict['Z']
+                L = input_dict['L']
+                dxy = input_dict['dxy']
+
+                deltaX = Z*dxy/L
+                recon = kreuzer3F(field, Z, L, input_dict['wavelength'], dxy, deltaX, input_dict['FC'])
+
+            sq = input_dict['squared']
+            ph = input_dict['phase']
 
             if sq:
                 arr = normalize(np.abs(recon)**2,255)
@@ -184,17 +198,24 @@ def reconstruct(image:Queue,
             else:
                 arr = normalize(np.abs(recon),255)
 
-            if not filters.empty():
-                filters_ = filters.get()
-                filter_functions = filters_[0]
-                filter_params = filters_[1]
+            filt_img = arr
 
-                for filter, param, in zip(filter_functions, filter_params):
-                    arr = filter(arr, param)
+            if input_dict['filters']:
+                filter_functions = input_dict['filters'][0]
+                filter_params = input_dict['filters'][1]
+
+                if input_dict['filter']:
+                    for filter, param, in zip(filter_functions, filter_params):
+                        filt_img = filter_dict[filter](filt_img, param)
 
             end_time = time.time()
             elapsed_time = end_time-init_time
             fps = round(1 / elapsed_time, 1)
 
-            if output.empty():
-                output.put((arr, fps))  
+            if not queue_manager['reconstruction']['output'].full():
+                
+                output_dict['image']= arr.astype(np.uint8)
+                output_dict['filtered']=filt_img.astype(np.uint8)
+                output_dict['fps'] = fps
+
+                queue_manager['reconstruction']['output'].put(output_dict)
