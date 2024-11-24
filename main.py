@@ -971,7 +971,7 @@ class App(ctk.CTk):
         while os.path.exists("saves/capture/capture%s.bmp" % i):
             i += 1
 
-        self.im_c.save('saves/capture/capture%s.bmp' % i)
+        self.img_c.cget('light_image').save('saves/capture/capture%s.bmp' % i)
 
     def save_processed(self, ext:str='bmp'):
         '''Saves a capture of reconstruction with an increasing number'''
@@ -979,7 +979,7 @@ class App(ctk.CTk):
         while os.path.exists("saves/reconstruction/reconstruction%s.bmp" % i):
             i += 1
 
-        self.im_r.save('saves/reconstruction/reconstruction%s.bmp' % i)
+        self.img_r.cget('light_image').save('saves/reconstruction/reconstruction%s.bmp' % i)
 
     def change_appearance_mode_event(self, new_appearance_mode):
         '''Changes between light and dark mode.'''
