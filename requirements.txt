@@ -1,0 +1,9 @@
+customtkinter
+kneed
+matplotlib
+numpy
+opencv_python
+Pillow
+scikit_learn
+scipy
+scikit-image
