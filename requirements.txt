@@ -1,3 +1,7 @@
+# Versions gave issues, sorry
+# Install in your previously activated environment 
+# using the following command:
+# python -m pip install -r requirements.txt
 customtkinter
 kneed
 matplotlib
