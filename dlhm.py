@@ -106,16 +106,15 @@ def dlhm(sample, dx_in, L, z, W_c, dx_out, wavelength, x0=0, y0=0, NA_s=0):
     # Apply distortion to the hologram
     camMat = np.array([[P, 0, P / 2], [0, Q, Q / 2], [0, 0, 1]])
     distCoeffs = np.array([-Dist_max / (2 * Mag), 0, 0, 0, 0])  # Radial distortion parameters
-    holo = cv.undistort(holo.astype(np.float32), camMat, distCoeffs)
-
+    Uz = cv.undistort(Uz.astype(np.float32), camMat, distCoeffs)
     # Normalize and post-process the hologram
-    holo = holo - np.min(holo)
-    holo = holo / np.max(holo)
-    holo = holo * PS
-    holo = holo * 2 ** 8
-    holo = np.round(holo).astype(np.uint8)
+    # holo = holo - np.min(holo)
+    # holo = holo / np.max(holo)
+    # holo = holo * PS
+    # holo = holo * 2 ** 8
+    # holo = np.round(holo).astype(np.uint8)
 
-    return holo
+    return Uz
 
 
 def ifts(A):
