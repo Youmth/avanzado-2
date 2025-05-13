@@ -172,9 +172,11 @@ def reconstruct(queue_manager:dict[dict[Queue, Queue], dict[Queue, Queue], dict[
                    'filtered':None,
                    'fps':None
                    }
+
+    recon = np.empty((0,0))
     while True:
         if not queue_manager['reconstruction']['input'].empty():
-            # We want this processing to ocurr only if there is an image to process
+            # We want this processing to ocur only if there is an image to process
             
             init_time = time.time()
 
@@ -204,9 +206,7 @@ def reconstruct(queue_manager:dict[dict[Queue, Queue], dict[Queue, Queue], dict[
                 recon = kreuzer3F(field, Z, L, input_dict['wavelength'], dxy, deltaX, FC)
 
             elif input_dict['algorithm'] == 'MJ':
-                # sample = 1-intensityImage
-                h_max = 0.350
-
+                # MJ algorithm parameters
                 # Simulation parameters
                 L = input_dict['L']  # Distance from the source to the hologram plane
                 z = input_dict['Z']  # Distance from the source to the sample's plane
@@ -214,12 +214,12 @@ def reconstruct(queue_manager:dict[dict[Queue, Queue], dict[Queue, Queue], dict[
                 lambda_ = input_dict['wavelength']  # Wavelength
                 dx_in = input_dict['dxy'] # Pixel size at the sensor
 
-                sample = np.exp(1j * 2 * np.pi * (1.51 - 1) * h_max * field / lambda_)
-
-
                 # Call the dlhm function to simulate digital lensless holograms
+                # TODO
+                offsetx = 0
+                offsety = 0
                 try:
-                    recon = dlhm(sample, dx_in, L, z, W_c, dx_in, lambda_, x0=0, y0=0, NA_s=DEFAULT_NUMERICAL_APERTURE)
+                    recon = dlhm(field, dx_in, L, z, W_c, dx_in, lambda_, x0=offsetx, y0=offsety, NA_s=DEFAULT_NUMERICAL_APERTURE)
                 except Exception as e:
                     print(f"Error in dlhm function: {e}")
                     continue

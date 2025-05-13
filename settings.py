@@ -17,7 +17,7 @@ INIT_L = INIT_MAX_L/2
 INIT_Z = INIT_MAX_L/4
 
 DEFAULT_SENSOR_WIDTH = 5550  # Width of the sensor
-DEFAULT_NUMERICAL_APERTURE = 0.1  # Numerical aperture of the lens
+DEFAULT_NUMERICAL_APERTURE = 0  # Numerical aperture of the lens
 
 MIN_DISTANCE = 0.001
 
